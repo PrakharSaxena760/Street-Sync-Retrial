@@ -1,0 +1,2615 @@
+<!-- 
+  STREETSYNC 5.0 — DEMO GUIDE
+  1. Open this file in two browser tabs
+  2. Tab 1: Click "I'm a Customer" → tap Interested on vendors
+  3. Tab 2: Click "I'm a Vendor" → watch count update live
+  4. Switch vendors via dropdown to show all 5
+  5. Use Reset Demo (bottom-right) before each new pitch
+  Prototype: Simulated data. Production: GPS + real backend.
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StreetSync 5.0</title>
+<style>
+/* ── CSS VARIABLES ── */
+:root {
+  --saffron:    #FF6B35;
+  --saffron-dk: #e8521c;
+  --bg:         #2C2C2C;
+  --card:       #FFFFFF;
+  --text-dark:  #1A1A1A;
+  --text-light: #FFFFFF;
+  --green:      #4CAF50;
+  --grey:       #9E9E9E;
+  --shadow:     0 4px 16px rgba(0,0,0,0.25);
+  --radius:     12px;
+  --max-w:      1200px;
+  --pad:        16px;
+}
+
+@media (min-width: 1024px) {
+  html, body { background: #222; }
+  .page { max-width: var(--max-w); margin: 0 auto; }
+  body { padding: 16px 24px; }
+  .footer { max-width: var(--max-w); margin: 0 auto; left: auto; right: auto; }
+}
+
+/* ── RESET ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  font-family: 'Georgia', 'Times New Roman', serif;
+  background: var(--bg);
+  color: var(--text-light);
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 100vh;
+}
+
+/* ── PAGE SYSTEM ── */
+.page {
+  display: none;
+  opacity: 0;
+  transition: opacity 200ms ease;
+  width: 100%;
+  max-width: var(--max-w);
+  padding: var(--pad);
+  padding-bottom: 80px;
+  min-height: 100vh;
+  flex-direction: column;
+}
+.page.active {
+  display: flex;
+  opacity: 1;
+}
+
+/* ── TYPOGRAPHY ── */
+h1 { font-size: 2.4rem; font-weight: 900; letter-spacing: -1px; }
+h2 { font-size: 1.5rem; font-weight: 700; }
+h3 { font-size: 1.1rem; font-weight: 600; }
+p  { line-height: 1.55; }
+
+/* ── BUTTONS ── */
+.btn {
+  display: inline-block;
+  padding: 12px 24px;
+  border: none;
+  border-radius: var(--radius);
+  font-size: 1rem;
+  font-family: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 80ms, opacity 150ms, background 150ms;
+  user-select: none;
+}
+.btn:active { transform: scale(0.96); }
+.btn-primary {
+  background: var(--saffron);
+  color: #fff;
+}
+.btn-primary:hover { background: var(--saffron-dk); }
+.btn-secondary {
+  background: transparent;
+  color: var(--saffron);
+  border: 2px solid var(--saffron);
+}
+.btn-secondary:hover { background: rgba(255,107,53,0.12); }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+/* ── CARDS ── */
+.card {
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: var(--pad);
+  color: var(--text-dark);
+  margin-bottom: 14px;
+}
+
+/* ── STATUS PILL ── */
+.pill {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.4px;
+}
+.pill-active  { background: var(--green); }
+.pill-closed  { background: var(--grey); }
+
+/* ── FOOTER ── */
+.footer {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  text-align: center;
+  font-size: 0.7rem;
+  opacity: 0.5;
+  padding: 8px var(--pad);
+  background: var(--bg);
+  z-index: 10;
+}
+
+/* ── TOAST ── */
+#toast {
+  position: fixed;
+  bottom: 40px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: var(--saffron);
+  color: #fff;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  opacity: 0;
+  transition: opacity 250ms, transform 250ms;
+  pointer-events: none;
+  white-space: nowrap;
+  z-index: 200;
+  max-width: calc(var(--max-w) - 32px);
+  text-align: center;
+}
+#toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* ── RESET BUTTON ── */
+#resetBtn {
+  position: fixed;
+  bottom: 32px;
+  right: 16px;
+  background: rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.5);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 0.72rem;
+  cursor: pointer;
+  z-index: 100;
+  transition: opacity 150ms, background 150ms;
+  font-family: inherit;
+}
+#resetBtn:hover { background: rgba(255,255,255,0.15); opacity: 1; }
+
+/* ── OVERLAY ── */
+#overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.75);
+  z-index: 300;
+  align-items: center;
+  justify-content: center;
+  padding: var(--pad);
+}
+#overlay.show { display: flex; }
+#overlayBox {
+  background: var(--card);
+  color: var(--text-dark);
+  border-radius: var(--radius);
+  padding: 24px;
+  width: 100%;
+  max-width: 400px;
+  box-shadow: var(--shadow);
+}
+#overlayBox h3 { margin-bottom: 14px; font-size: 1.1rem; }
+.audit-list { list-style: none; margin-bottom: 18px; }
+.audit-list li {
+  font-size: 0.8rem;
+  padding: 6px 0;
+  border-bottom: 1px solid #eee;
+  color: #555;
+}
+.audit-list li:last-child { border-bottom: none; }
+.overlay-btns { display: flex; gap: 10px; }
+.overlay-btns .btn { flex: 1; padding: 10px; font-size: 0.9rem; }
+
+/* ── PULSE ANIMATION ── */
+@keyframes pulse {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.3); }
+  100% { transform: scale(1); }
+}
+.pulse { animation: pulse 300ms ease-out; }
+
+/* ── INTEREST COUNT ── */
+.interest-count {
+  display: inline-block;
+  font-size: 1.6rem;
+  font-weight: 900;
+  color: var(--saffron);
+  line-height: 1;
+}
+.interest-label { font-size: 0.75rem; color: #777; }
+
+/* ── DEMAND BADGE ── */
+.demand-badge {
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 6px;
+  display: inline-block;
+}
+.demand-fire { background: #fff3e0; color: #e65100; }
+.demand-fill { background: #e3f2fd; color: #1565c0; }
+
+.btn-not-interested {
+  background: transparent;
+  color: #e53935;
+  border: 1.5px solid #e53935;
+  border-radius: var(--radius);
+  padding: 10px 16px;
+  font-size: 0.85rem;
+  font-family: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 150ms, opacity 150ms, transform 80ms;
+}
+.btn-not-interested:hover:not(:disabled) { background: rgba(229,57,53,0.08); }
+.btn-not-interested:active:not(:disabled) { transform: scale(0.96); }
+.btn-not-interested:disabled { opacity: 0.3; cursor: not-allowed; }
+
+/* ── VENDOR STATUS LABEL (customer-facing) ── */
+.vendor-status-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 6px;
+  margin-top: 8px;
+}
+.vsl-ready   { background: #e8f5e9; color: #2e7d32; }
+.vsl-low     { background: #fff8e1; color: #f57f17; }
+.vsl-back    { background: #e3f2fd; color: #1565c0; }
+.vsl-closed  { background: #fce4ec; color: #c62828; }
+
+/* ── MENU BUTTON ACTIVE STATE ── */
+.btn-menu-active {
+  background: var(--saffron) !important;
+  color: #fff !important;
+  border-color: var(--saffron) !important;
+}
+
+/* ── VENDOR CARD ROW ── */
+.vendor-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 10px;
+}
+.vendor-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 12px;
+  gap: 8px;
+}
+
+/* ── VENDOR DASHBOARD ── */
+#vendorSelect {
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  border: 2px solid var(--saffron);
+  font-size: 1rem;
+  font-family: inherit;
+  background: var(--bg);
+  color: var(--text-light);
+  margin-bottom: 18px;
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='8' viewBox='0 0 14 8'%3E%3Cpath d='M1 1l6 6 6-6' stroke='%23FF6B35' stroke-width='2' fill='none'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  padding-right: 36px;
+}
+
+.menu-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 14px;
+}
+.menu-grid .btn {
+  padding: 10px 8px;
+  font-size: 0.82rem;
+  width: 100%;
+}
+
+/* ── TOGGLE ── */
+.toggle-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 12px 0;
+}
+.toggle-label { font-size: 0.9rem; color: #555; font-weight: 600; }
+.toggle {
+  position: relative;
+  width: 44px; height: 24px;
+}
+.toggle input { display: none; }
+.toggle-slider {
+  position: absolute;
+  inset: 0;
+  background: #ccc;
+  border-radius: 24px;
+  cursor: pointer;
+  transition: background 200ms;
+}
+.toggle-slider::after {
+  content: '';
+  position: absolute;
+  left: 3px; top: 3px;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 200ms;
+}
+.toggle input:checked + .toggle-slider { background: var(--green); }
+.toggle input:checked + .toggle-slider::after { transform: translateX(20px); }
+
+/* ── HOME PAGE ── */
+#homePage {
+  justify-content: center;
+  text-align: center;
+  gap: 18px;
+}
+.home-logo {
+  font-size: 2.8rem;
+  font-weight: 900;
+  color: var(--saffron);
+  letter-spacing: -2px;
+  line-height: 1;
+}
+.home-sub {
+  font-size: 1rem;
+  color: rgba(255,255,255,0.8);
+  max-width: 360px;
+  margin: 0 auto;
+}
+.home-tag {
+  font-size: 0.85rem;
+  color: rgba(255,255,255,0.5);
+}
+.home-btns {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+/* ── NAV BAR ── */
+.nav-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 0 14px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  margin-bottom: 16px;
+}
+.nav-logo {
+  font-size: 1rem;
+  font-weight: 900;
+  color: var(--saffron);
+  letter-spacing: -0.5px;
+  cursor: pointer;
+}
+.nav-links {
+  display: flex;
+  gap: 8px;
+}
+.nav-link {
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.2);
+  color: rgba(255,255,255,0.75);
+  border-radius: 20px;
+  padding: 4px 12px;
+  font-size: 0.75rem;
+  font-family: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 150ms, color 150ms, border-color 150ms;
+}
+.nav-link:hover {
+  background: rgba(255,107,53,0.15);
+  border-color: var(--saffron);
+  color: var(--saffron);
+}
+.nav-link.active-nav {
+  background: var(--saffron);
+  border-color: var(--saffron);
+  color: #fff;
+}
+
+/* ── PAGE HEADER ── */
+.page-header { margin-bottom: 20px; }
+.page-header h2 { color: var(--saffron); }
+.page-header p { font-size: 0.85rem; color: rgba(255,255,255,0.65); margin-top: 4px; }
+
+/* ── INSIGHT BADGE ── */
+.insight-badge {
+  display: inline-block;
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  margin: 8px 0;
+}
+.insight-high { background: #fff3e0; color: #e65100; }
+.insight-mod  { background: #e8f5e9; color: #2e7d32; }
+.insight-low  { background: #f3f4f6; color: #666; }
+
+.vendor-big-name { font-size: 1.5rem; font-weight: 900; color: var(--text-dark); }
+.vendor-big-item { font-size: 0.9rem; color: #777; margin-bottom: 6px; }
+.live-count-wrap { margin: 10px 0; }
+.live-count-num  { font-size: 2.8rem; font-weight: 900; color: var(--saffron); line-height: 1; }
+.live-count-lbl  { font-size: 0.8rem; color: #777; }
+/* ── MAP ── */
+.map-grid {
+  display: grid;
+  grid-template-columns: minmax(280px, 35%) minmax(320px, 65%);
+  gap: 16px;
+  align-items: stretch;
+  margin-top: 14px;
+}
+
+#customerVendorPanel {
+  flex: 0 1 auto;
+  width: auto;
+}
+
+#customerMapWrap {
+  flex: 1 1 auto;
+  width: auto;
+}
+#mapSidePanel, #vendorMapSidePanel, #customerVendorPanel {
+  flex: 0 1 35%;
+  width: 35%;
+  min-width: 280px;
+  max-height: calc(100vh - 160px);
+  background: #1a1f2e;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 14px;
+  overflow: auto;
+  border: 1px solid rgba(255,255,255,0.12);
+  transition: width 250ms ease, opacity 250ms ease, transform 250ms ease;
+}
+#customerVendorPanel.collapsed {
+  width: 0 !important;
+  min-width: 0 !important;
+  padding: 0 !important;
+  border: none !important;
+  opacity: 0.01;
+  transform: translateX(-6px);
+}
+#customerVendorPanel.collapsed #vendorList,
+#customerVendorPanel.collapsed .panel-top {
+  display: none;
+}
+#customerVendorPanel .panel-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+#customerVendorPanel .panel-top h3 { margin: 0; color: #fff; }
+#customerVendorPanel .panel-top .btn {
+  padding: 6px 12px;
+  font-size: 0.76rem;
+}
+#mapSidePanel h3, #vendorMapSidePanel h3 {
+  margin-bottom: 12px;
+  font-size: 1rem;
+}
+#mapWrap, #vendorMapWrap, #customerMapWrap {
+  position: relative;
+  flex: 1 1 65%;
+  min-width: 300px;
+  min-height: 65vh;
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: #1a1f2e;
+  box-shadow: var(--shadow);
+}
+#mapCanvas, #vendorMapCanvas, #customerMapCanvas {
+  display: block;
+  width: 100%;
+  aspect-ratio: 448 / 380;
+  height: auto;
+  min-height: 420px;
+  max-height: 80vh;
+  cursor: crosshair;
+}
+@media (max-width: 1200px) {
+  #mapCanvas, #vendorMapCanvas, #customerMapCanvas {
+    height: 62vh;
+    min-height: 380px;
+  }
+}
+@media (max-width: 900px) {
+  .map-grid {
+    display: block;
+  }
+  #mapSidePanel, #vendorMapSidePanel, #customerVendorPanel, #mapWrap, #vendorMapWrap, #customerMapWrap {
+    width: 100%;
+    flex: 1 1 100%;
+    min-width: auto;
+  }
+  #mapCanvas, #vendorMapCanvas, #customerMapCanvas {
+    height: 50vh;
+    min-height: 320px;
+  }
+}
+#vendorMapFilterBar {
+  position: absolute;
+  top: 10px; left: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  z-index: 100;
+  background: rgba(0,0,0,0.55);
+  border-radius: 8px;
+  padding: 6px 8px;
+  font-size: 0.85rem;
+  color: #ccc;
+}
+.zoom-btn {
+  width: 28px; height: 28px;
+  border-radius: 6px;
+  border: none;
+  background: rgba(255,255,255,0.12);
+  color: #fff;
+  font-size: 1.1rem;
+  font-weight: 900;
+  cursor: pointer;
+  line-height: 1;
+  transition: background 120ms;
+  font-family: inherit;
+}
+.zoom-btn:hover { background: var(--saffron); }
+#zoomLabel, #vendorZoomLabel, #customerZoomLabel {
+  font-size: 0.65rem;
+  color: rgba(255,255,255,0.5);
+  font-weight: 700;
+}
+#mapLegend, #vendorMapLegend {
+  padding: 10px 14px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+}
+.map-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.72rem;
+  color: rgba(255,255,255,0.6);
+}
+.map-legend-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* ── ROUTE MINI-MAP ── */
+#routeMapWrap {
+  margin-top: 14px;
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: #1a1f2e;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+#routeMapWrap h4 {
+  padding: 10px 12px 4px;
+  font-size: 0.8rem;
+  color: rgba(255,255,255,0.7);
+  background: #1a1f2e;
+}
+#routeMapWrap p {
+  padding: 0 12px 8px;
+  font-size: 0.72rem;
+  color: rgba(255,255,255,0.35);
+}
+#routeCanvas {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  min-height: 380px;
+  height: 100%;
+  cursor: crosshair;
+  margin: 0 auto;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: var(--radius);
+  background: #1a1f2e;
+}
+.route-actions {
+  display: flex;
+  gap: 8px;
+  padding: 8px 12px 12px;
+  background: #1a1f2e;
+}
+.route-actions .btn {
+  flex: 1;
+  padding: 7px 8px;
+  font-size: 0.78rem;
+}
+.route-actions .btn.active-mode {
+  background: var(--saffron);
+  color: white;
+  border-color: var(--saffron-dk);
+}
+
+/* ── MOVING / STATIONARY TOGGLE IN VENDOR DASH ── */
+.mobility-toggle {
+  display: flex;
+  gap: 8px;
+  margin: 12px 0;
+}
+.mobility-btn {
+  flex: 1;
+  padding: 8px;
+  border-radius: 8px;
+  border: 2px solid rgba(0,0,0,0.1);
+  font-size: 0.8rem;
+  font-family: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 150ms;
+  background: #f5f5f5;
+  color: #888;
+}
+.mobility-btn.active-mobility {
+  border-color: var(--saffron);
+  background: #fff3ee;
+  color: var(--saffron);
+}
+</style>
+</head>
+<body>
+
+<!-- HOME PAGE -->
+<div class="page active" id="homePage">
+  <div class="home-logo">StreetSync 5.0</div>
+  <p class="home-sub">Street vendors lose 30% revenue to unpredictable demand. StreetSync fixes that.</p>
+  <p class="home-tag">Real-time demand signals between street vendors and hungry customers.</p>
+  <div class="home-btns">
+    <button class="btn btn-primary" onclick="goPage('customerPage')">🛒 I'm a Customer</button>
+    <button class="btn btn-secondary" onclick="goPage('vendorPage')">🏪 I'm a Vendor</button>
+    <button class="btn btn-secondary" onclick="goPage('mapPage')">🗺️ Live Map</button>
+  </div>
+  <p style="font-size:0.72rem;opacity:0.4;margin-top:16px;text-align:center">Open in two tabs for live cross-tab sync demo</p>
+</div>
+
+<!-- CUSTOMER PAGE -->
+<div class="page" id="customerPage">
+  <div class="nav-bar">
+    <span class="nav-logo" onclick="goPage('homePage')">StreetSync 5.0</span>
+    <div class="nav-links">
+      <button class="nav-link active-nav">🛒 Customer</button>
+      <button class="nav-link" onclick="goPage('vendorPage')">🏪 Vendor</button>
+      <button class="nav-link" onclick="goPage('mapPage')">🗺️ Map</button>
+      <button class="nav-link" onclick="goPage('homePage')">🏠 Home</button>
+    </div>
+  </div>
+  <div class="page-header">
+    <h2>Vendors Near You</h2>
+    <p>Tap Interested to signal demand — vendors react in real time.</p>
+  </div>
+  <div class="map-grid">
+    <aside id="customerVendorPanel" class="customer-ctrl-panel">
+      <div class="panel-top">
+        <h3>Vendors Near You</h3>
+        <button id="customerPanelToggle" class="btn btn-secondary" onclick="toggleCustomerVendorPanel()">⇔</button>
+      </div>
+      <div style="margin-bottom:8px;">
+        <select id="customerMapVendorSelect" onchange="onMapVendorSelect('customerMapVendorSelect')" style="width:100%;background:#1a1f2e;color:#fff;border:1px solid rgba(255,255,255,0.2);border-radius:8px;padding:8px;">
+          <option value="">Track vendor on map</option>
+        </select>
+        <button class="btn btn-secondary" style="width:100%;margin-top:8px;" onclick="centerSelectedVendor()">➡️ Center on selected</button>
+        <label style="display:flex;align-items:center;gap:6px;font-size:0.85rem;color:#ccc;margin-top:8px;">
+          <input type="checkbox" id="customerMapFollowToggle" onchange="toggleFollowVendor(this.checked)"> Follow selected vendor
+        </label>
+      </div>
+      <div id="vendorList"></div>
+      <div id="customerMapLegend" style="margin-top:12px;"></div>
+    </aside>
+    <div id="customerMapWrap" class="map-wrap">
+      <div id="customerMapZoomBar" class="map-zoom-bar">
+        <button class="zoom-btn" onclick="zoomMap(-1)">−</button>
+        <span id="customerZoomLabel">1×</span>
+        <button class="zoom-btn" onclick="zoomMap(1)">+</button>
+      </div>
+      <canvas id="customerMapCanvas"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- VENDOR PAGE -->
+<div class="page" id="vendorPage">
+  <div class="nav-bar">
+    <span class="nav-logo" onclick="goPage('homePage')">StreetSync 5.0</span>
+    <div class="nav-links">
+      <button class="nav-link" onclick="goPage('customerPage')">🛒 Customer</button>
+      <button class="nav-link active-nav">🏪 Vendor</button>
+      <button class="nav-link" onclick="goPage('mapPage')">🗺️ Map</button>
+      <button class="nav-link" onclick="goPage('homePage')">🏠 Home</button>
+    </div>
+  </div>
+  <div class="page-header">
+    <h2>Vendor Dashboard</h2>
+  </div>
+  <select id="vendorSelect" onchange="renderVendorDash()"></select>
+  <div id="vendorDash"></div>
+</div>
+
+<!-- MAP PAGE -->
+<div class="page" id="mapPage">
+  <div class="nav-bar">
+    <span class="nav-logo" onclick="goPage('homePage')">StreetSync 5.0</span>
+    <div class="nav-links">
+      <button class="nav-link" onclick="goPage('customerPage')">🛒 Customer</button>
+      <button class="nav-link" onclick="goPage('vendorPage')">🏪 Vendor</button>
+      <button class="nav-link active-nav">🗺️ Map</button>
+      <button class="nav-link" onclick="goPage('homePage')">🏠 Home</button>
+    </div>
+  </div>
+  <div class="page-header">
+    <h2>Live Vendor Map</h2>
+    <p id="mapScaleLabel">Viewing ~3km area · 📍 Stationary &nbsp;🚶 Moving</p>
+  </div>
+  <div class="map-grid">
+    <aside id="mapSidePanel">
+      <h3>Vendor Tracking</h3>
+      <select id="mapVendorSelect" onchange="onMapVendorSelect()" style="width:100%;background:#1a1f2e;color:#fff;border:1px solid rgba(255,255,255,0.2);border-radius:8px;padding:8px;">
+        <option value="">Select vendor to track</option>
+      </select>
+      <button class="btn btn-secondary" style="width:100%;margin-top:10px;" onclick="centerSelectedVendor()">➡️ Center on vendor</button>
+      <label style="display:flex;align-items:center;gap:6px;font-size:0.85rem;color:#ccc;margin-top:10px;">
+        <input type="checkbox" id="mapFollowToggle" onchange="toggleFollowVendor(this.checked)"> Follow vendor
+      </label>
+      <div id="mapLegend" style="margin-top:18px;"></div>
+    </aside>
+    <div id="mapWrap">
+
+    <div id="mapZoomBar">
+      <button class="zoom-btn" onclick="zoomMap(-1)">−</button>
+      <span id="zoomLabel">1×</span>
+      <button class="zoom-btn" onclick="zoomMap(1)">+</button>
+    </div>
+    <canvas id="mapCanvas"></canvas>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<div class="footer">
+  🛡️ Demo Mode: Capped simulation (50m radius equiv.) | Production: GPS-fenced + real users | StreetSync v5.0
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<!-- RESET BUTTON -->
+<button id="resetBtn" onclick="showOverlay()">⟳ Reset Demo</button>
+
+<!-- OVERLAY -->
+<div id="overlay">
+  <div id="overlayBox">
+    <h3>Demo Audit Log</h3>
+    <ul class="audit-list" id="auditList"></ul>
+    <div class="overlay-btns">
+      <button class="btn btn-primary" onclick="confirmReset()">Confirm Reset</button>
+      <button class="btn btn-secondary" onclick="hideOverlay()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>const SEED = [
+  { id:1, name:'Amit Chaiwala',  item:'Chai',         status:'active', statusLabel:'Ready to Serve',   interests:3, cap:8, x:800,  y:500,  startX:800,  startY:500,  moving:false, route:[] },
+  { id:2, name:'Raju Samosa',    item:'Samosa',       status:'closed', statusLabel:'Closed for Today', interests:1, cap:5, x:2000, y:1000, startX:2000, startY:1000, moving:false, route:[] },
+  { id:3, name:'Priya Dosa',     item:'Masala Dosa',  status:'active', statusLabel:'Ready to Serve',   interests:2, cap:7, x:1300, y:1500, startX:1300, startY:1500, moving:true,  route:[] },
+  { id:4, name:'Kabir Juice',    item:'Fresh Juice',  status:'active', statusLabel:'Ready to Serve',   interests:0, cap:6, x:500,  y:2000, startX:500,  startY:2000, moving:true,  route:[] },
+  { id:5, name:'Meena Chaat',    item:'Pani Puri',    status:'closed', statusLabel:'Closed for Today', interests:4, cap:8, x:2300, y:400,  startX:2300, startY:400,  moving:false, route:[] },
+];
+// Centre map on Chowk by default
+let mapOffX = 1500, mapOffY = 1500; // legacy marker remnants (unused)
+
+function loadData() {
+  const raw = localStorage.getItem('streetsync_data');
+  const vendors = raw ? JSON.parse(raw) : null;
+  if (!vendors) {
+    const seedCopy = JSON.parse(JSON.stringify(SEED));
+    localStorage.setItem('streetsync_data', JSON.stringify(seedCopy));
+    return seedCopy;
+  }
+
+  // Backward compatibility: ensure starting location exists and x/y initialization
+  vendors.forEach(v => {
+    if (v.startX == null || v.startY == null) {
+      if (v.x != null && v.y != null && v.x !== 0 && v.y !== 0) {
+        v.startX = v.x;
+        v.startY = v.y;
+      } else {
+        v.startX = null;
+        v.startY = null;
+      }
+    }
+
+    if ((v.x == null || v.y == null) && v.startX != null && v.startY != null) {
+      v.x = v.startX;
+      v.y = v.startY;
+    }
+  });
+
+  return vendors;
+}
+
+function saveData(vendors) {
+  localStorage.setItem('streetsync_data', JSON.stringify(vendors));
+  renderCurrentPage();
+}
+
+function loadAudit() {
+  const raw = localStorage.getItem('streetsync_audit');
+  return raw ? JSON.parse(raw) : [];
+}
+
+function saveAudit(log) {
+  localStorage.setItem('streetsync_audit', JSON.stringify(log));
+}
+
+function logAudit(vendorName) {
+  const log = loadAudit();
+  log.push({ vendor: vendorName, ts: new Date().toISOString(), session: getSession() });
+  saveAudit(log);
+}
+function getSession() {
+  let s = localStorage.getItem('streetsync_session');
+  if (!s) {
+    s = 'user_' + Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 6);
+    localStorage.setItem('streetsync_session', s);
+  }
+  return s;
+}
+
+function getSessionClicks() {
+  const raw = localStorage.getItem('streetsync_clicks_' + getSession());
+  return raw ? JSON.parse(raw) : {};
+}
+
+function markSessionClick(vendorId) {
+  const clicks = getSessionClicks();
+  clicks[vendorId] = 'interested';
+  localStorage.setItem('streetsync_clicks_' + getSession(), JSON.stringify(clicks));
+}
+
+function unmarkSessionClick(vendorId) {
+  const clicks = getSessionClicks();
+  delete clicks[vendorId];
+  localStorage.setItem('streetsync_clicks_' + getSession(), JSON.stringify(clicks));
+}
+let lastClickTime = 0;
+const COOLDOWN_MS = 3000;
+let currentPage = 'homePage';
+
+function goPage(id) {
+  if (id === currentPage) return;                      // already here — no-op
+  const prev = document.getElementById(currentPage);
+  if (!prev) return;
+  prev.style.opacity = '0';
+  setTimeout(() => {
+    prev.classList.remove('active');
+    prev.style.opacity = '';                           // reset for next visit
+    const next = document.getElementById(id);
+    if (!next) return;
+    next.classList.add('active');
+    currentPage = id;
+    setTimeout(() => { next.style.opacity = '1'; }, 10);
+    renderCurrentPage();
+  }, 200);
+}
+
+function renderCurrentPage() {
+  if (currentPage === 'customerPage') renderCustomer();
+  if (currentPage === 'vendorPage')   renderVendorDash();
+  if (currentPage === 'mapPage')      renderMap();
+}
+
+function ensureRouteMapSize() {
+  const canvas = document.getElementById('routeCanvas');
+  if (!canvas) return;
+  const cssW = canvas.offsetWidth || 400;
+  const cssH = canvas.offsetHeight || 200;
+  canvas.width = cssW * (window.devicePixelRatio || 1);
+  canvas.height = cssH * (window.devicePixelRatio || 1);
+  const sel = document.getElementById('vendorSelect');
+  if (!sel) return;
+  const vendors = loadData();
+  const selId = parseInt(sel.value, 10);
+  const v = vendors.find(x => x.id === selId) || vendors[0];
+  if (v) drawRouteCanvas(v, canvas, cssW, cssH, window.devicePixelRatio || 1);
+}
+
+window.addEventListener('resize', () => {
+  if (currentPage === 'mapPage') renderMap();
+  if (currentPage === 'vendorPage') renderVendorDash();
+  ensureRouteMapSize();
+});
+
+// CROSS-TAB SYNC
+
+window.addEventListener('storage', (e) => {
+  if (!e.key || e.key.startsWith('streetsync_')) {
+    renderCurrentPage();
+  }
+});
+let toastTimer = null;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2500);
+}
+function demandBadge(n) {
+  if (n > 5)  return '<span class="demand-badge demand-fire">🔥 Trending</span>';
+  if (n >= 3) return '<span class="demand-badge demand-fill">⚡ Popular</span>';
+  return '';
+}
+
+function statusLabelBadge(v) {
+  const label = v.statusLabel || (v.status === 'active' ? 'Ready to Serve' : 'Closed for Today');
+  const map = {
+    'Ready to Serve':   ['vsl-ready',  '✅'],
+    'Running Low':      ['vsl-low',    '⚠️'],
+    'Back in 10 min':   ['vsl-back',   '⏱'],
+    'Closed for Today': ['vsl-closed', '🚫'],
+  };
+  const [cls, icon] = map[label] || ['vsl-ready', '📍'];
+  return `<span class="vendor-status-label ${cls}">${icon} ${label}</span>`;
+}
+
+function renderCustomer() {
+  const el = document.getElementById('vendorList');
+  if (!el) return;                                     // not on customer page — skip
+  const vendors = loadData();
+  const clicks  = getSessionClicks();
+  el.innerHTML = vendors.map(v => {
+    const clicked = !!clicks[v.id];
+    return `
+    <div class="card">
+      <div class="vendor-card-header">
+        <div>
+          <strong>${v.name}</strong><br>
+          <small style="color:#777">${v.item}</small>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+          <span class="pill ${v.status === 'active' ? 'pill-active' : 'pill-closed'}">
+            ${v.status === 'active' ? 'Open' : 'Closed'}
+          </span>
+          <span style="font-size:0.7rem;color:#aaa">${v.moving ? '🚶 Moving' : '📍 Stationary'}</span>
+        </div>
+      </div>
+      <div style="margin:8px 0;display:flex;align-items:baseline;gap:6px">
+        <span class="interest-count" id="count-${v.id}">${v.interests}</span>
+        <span class="interest-label">locals interested</span>
+        ${demandBadge(v.interests)}
+      </div>
+      <div>${statusLabelBadge(v)}</div>
+      <div class="vendor-card-footer">
+        <button class="btn btn-primary" id="ibtn-${v.id}"
+          onclick="onInterested(${v.id})"
+          ${clicked ? 'disabled' : ''}>
+          ${clicked ? '✓ Noted' : 'Interested'}
+        </button>
+        <button class="btn btn-not-interested" id="nibtn-${v.id}"
+          onclick="onNotInterested(${v.id})"
+          ${!clicked ? 'disabled' : ''}>
+          ${clicked ? '✕ Not Interested' : 'Not Interested'}
+        </button>
+      </div>
+    </div>`;
+  }).join('');
+  renderCustomerMap();
+}
+
+function renderCustomerMap() {
+  const vendors = loadData();
+  populateMapVendorSelect('customerMapVendorSelect');
+  drawMap(vendors, 'customerMapCanvas', 'customerMapLegend');
+  ensureMapSize('customerMapCanvas');
+}
+
+function toggleCustomerVendorPanel() {
+  const panel = document.getElementById('customerVendorPanel');
+  if (!panel) return;
+  panel.classList.toggle('collapsed');
+}
+
+function attachMapInteractions(canvasId) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  // Clean up old listeners if they exist, then re-attach fresh
+  if (canvas.dataset.mapEvents === 'attached') {
+    if (canvas._mapMouseDown) canvas.removeEventListener('mousedown', canvas._mapMouseDown);
+    if (canvas._mapMouseMove) canvas.removeEventListener('mousemove', canvas._mapMouseMove);
+    if (canvas._mapMouseUp) canvas.removeEventListener('mouseup', canvas._mapMouseUp);
+    if (canvas._mapMouseLeave) canvas.removeEventListener('mouseleave', canvas._mapMouseLeave);
+    if (canvas._mapWheel) canvas.removeEventListener('wheel', canvas._mapWheel);
+    if (canvas._mapTouchStart) canvas.removeEventListener('touchstart', canvas._mapTouchStart);
+    if (canvas._mapTouchMove) canvas.removeEventListener('touchmove', canvas._mapTouchMove);
+    if (canvas._mapTouchEnd) canvas.removeEventListener('touchend', canvas._mapTouchEnd);
+    if (canvas._mapClick) canvas.removeEventListener('click', canvas._mapClick);
+  }
+  canvas.dataset.mapEvents = 'attached';
+  canvas.style.touchAction = 'none';
+
+  let dragging = false;
+  let startX = 0, startY = 0;
+  let originOffX = mapCenterX, originOffY = mapCenterY;
+
+  const getScale = (cw, ch) => (cw / WORLD) * ZOOM_LEVELS[mapZoom - 1];
+
+  const localRender = () => {
+    if (currentPage === 'mapPage') {
+      const vendors = loadData();
+      drawMap(vendors, 'mapCanvas', 'mapLegend');
+    }
+    if (currentPage === 'vendorPage') {
+      const vendors = loadData();
+      const vendorSel = document.getElementById('vendorSelect');
+      const vendorId = vendorSel ? parseInt(vendorSel.value, 10) : null;
+      const selected = vendors.find(v => v.id === vendorId) || vendors.find(v => v.id === mapTrackedVendorId);
+      drawMap(vendors, 'vendorMapCanvas', 'vendorMapLegend', selected);
+    }
+    if (currentPage === 'customerPage') {
+      const vendors = loadData();
+      drawMap(vendors, 'customerMapCanvas', 'customerMapLegend');
+    }
+  };
+
+  canvas._mapMouseDown = (e) => {
+    e.preventDefault();
+    dragging = true;
+    startX = e.clientX;
+    startY = e.clientY;
+    originOffX = mapCenterX;
+    originOffY = mapCenterY;
+  };
+  canvas.addEventListener('mousedown', canvas._mapMouseDown);
+
+  canvas._mapMouseMove = (e) => {
+    if (!dragging) return;
+    const rect = canvas.getBoundingClientRect();
+    const cw = rect.width;
+    const ch = rect.height;
+    const scale = getScale(cw, ch);
+    const dx = e.clientX - startX;
+    const dy = e.clientY - startY;
+    mapCenterX = originOffX - dx / scale;
+    mapCenterY = originOffY - dy / scale;
+    localRender();
+  };
+  canvas.addEventListener('mousemove', canvas._mapMouseMove);
+
+  canvas._mapMouseUp = () => {
+    dragging = false;
+  };
+  canvas.addEventListener('mouseup', canvas._mapMouseUp);
+
+  canvas._mapMouseLeave = () => {
+    dragging = false;
+  };
+  canvas.addEventListener('mouseleave', canvas._mapMouseLeave);
+
+  canvas._mapWheel = (e) => {
+    e.preventDefault();
+    const rect = canvas.getBoundingClientRect();
+    const cw = rect.width;
+    const ch = rect.height;
+    const px = e.clientX - rect.left;
+    const py = e.clientY - rect.top;
+
+    const before = c2w(px, py, cw, ch);
+
+    if (e.deltaY < 0) {
+      mapZoom = Math.min(4, mapZoom + 1);
+    } else {
+      mapZoom = Math.max(1, mapZoom - 1);
+    }
+
+    const scale = getScale(cw, ch);
+    mapCenterX = before.x + (cw / 2 - px) / scale;
+    mapCenterY = before.y + (ch / 2 - py) / scale;
+
+    const label = ZOOM_LABELS[mapZoom - 1];
+    const mapScaleEl = document.getElementById('zoomLabel');
+    const vendorScaleEl = document.getElementById('vendorZoomLabel');
+    const customerScaleEl = document.getElementById('customerZoomLabel');
+    if (mapScaleEl) mapScaleEl.textContent = label;
+    if (vendorScaleEl) vendorScaleEl.textContent = label;
+    if (customerScaleEl) customerScaleEl.textContent = label;
+
+    localRender();
+  };
+  canvas.addEventListener('wheel', canvas._mapWheel, { passive: false });
+
+  canvas._mapTouchStart = (e) => {
+    if (e.touches.length === 1) {
+      const t = e.touches[0];
+      dragging = true;
+      startX = t.clientX;
+      startY = t.clientY;
+      originOffX = mapCenterX;
+      originOffY = mapCenterY;
+    }
+  };
+  canvas.addEventListener('touchstart', canvas._mapTouchStart, { passive: false });
+
+  canvas._mapTouchMove = (e) => {
+    if (!dragging || e.touches.length !== 1) return;
+    e.preventDefault();
+    const t = e.touches[0];
+    const rect = canvas.getBoundingClientRect();
+    const cw = rect.width;
+    const ch = rect.height;
+    const scale = getScale(cw, ch);
+    const dx = t.clientX - startX;
+    const dy = t.clientY - startY;
+    mapCenterX = originOffX - dx / scale;
+    mapCenterY = originOffY - dy / scale;
+    localRender();
+  };
+  canvas.addEventListener('touchmove', canvas._mapTouchMove, { passive: false });
+
+  canvas._mapTouchEnd = () => {
+    dragging = false;
+  };
+  canvas.addEventListener('touchend', canvas._mapTouchEnd);
+
+  canvas._mapClick = (e) => {
+    if (dragging) return; // Ignore clicks that are part of drags
+    if (currentPage === 'customerPage' || currentPage === 'mapPage') {
+      const rect = canvas.getBoundingClientRect();
+      const cw = rect.width;
+      const ch = rect.height;
+      const px = e.clientX - rect.left;
+      const py = e.clientY - rect.top;
+      const worldPos = c2w(px, py, cw, ch);
+      customerUserX = worldPos.x;
+      customerUserY = worldPos.y;
+      localRender();
+    }
+  };
+  canvas.addEventListener('click', canvas._mapClick);
+
+  // Removed click handler for setting vendor location on main map
+}
+
+function attachRouteMapInteractions(canvasId) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  if (canvas.dataset.routeMapEvents === 'attached') return;
+  canvas.dataset.routeMapEvents = 'attached';
+  canvas.style.touchAction = 'none';
+
+  let dragging = false;
+  let startX = 0, startY = 0;
+  let originOffX = routeMapCenterX, originOffY = routeMapCenterY;
+
+  const getScale = (cw, ch) => (cw / WORLD) * ZOOM_LEVELS[routeMapZoom - 1];
+
+  const localRender = () => {
+    const sel = document.getElementById('vendorSelect');
+    if (!sel) return;
+    const vendors = loadData();
+    const selId = parseInt(sel.value, 10);
+    const v = vendors.find(x => x.id === selId) || vendors[0];
+    if (!v) return;
+    drawRouteCanvas(v, canvas, canvas.offsetWidth, canvas.offsetHeight, window.devicePixelRatio || 1);
+  };
+
+  canvas.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    dragging = true;
+    startX = e.clientX;
+    startY = e.clientY;
+    originOffX = routeMapCenterX;
+    originOffY = routeMapCenterY;
+  });
+
+  canvas.addEventListener('mousemove', (e) => {
+    if (!dragging) return;
+    const rect = canvas.getBoundingClientRect();
+    const cw = rect.width;
+    const ch = rect.height;
+    const scale = getScale(cw, ch);
+    const dx = e.clientX - startX;
+    const dy = e.clientY - startY;
+    routeMapCenterX = originOffX - dx / scale;
+    routeMapCenterY = originOffY - dy / scale;
+    localRender();
+  });
+
+  canvas.addEventListener('mouseup', () => { dragging = false; });
+  canvas.addEventListener('mouseleave', () => { dragging = false; });
+
+  canvas.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const rect = canvas.getBoundingClientRect();
+    const cw = rect.width;
+    const ch = rect.height;
+    const px = e.clientX - rect.left;
+    const py = e.clientY - rect.top;
+
+    const beforeX = (px - (cw/2 - routeMapCenterX * getScale(cw,ch))) / getScale(cw,ch);
+    const beforeY = (py - (ch/2 - routeMapCenterY * getScale(cw,ch))) / getScale(cw,ch);
+
+    if (e.deltaY < 0) {
+      routeMapZoom = Math.min(4, routeMapZoom + 1);
+    } else {
+      routeMapZoom = Math.max(1, routeMapZoom - 1);
+    }
+
+    const scale = getScale(cw, ch);
+    routeMapCenterX = beforeX + (cw / 2 - px) / scale;
+    routeMapCenterY = beforeY + (ch / 2 - py) / scale;
+    localRender();
+  }, { passive: false });
+
+  canvas.addEventListener('touchstart', (e) => {
+    if (e.touches.length === 1) {
+      const t = e.touches[0];
+      dragging = true;
+      startX = t.clientX;
+      startY = t.clientY;
+      originOffX = routeMapCenterX;
+      originOffY = routeMapCenterY;
+    }
+  }, { passive: false });
+
+  canvas.addEventListener('touchmove', (e) => {
+    if (!dragging || e.touches.length !== 1) return;
+    e.preventDefault();
+    const t = e.touches[0];
+    const rect = canvas.getBoundingClientRect();
+    const cw = rect.width;
+    const ch = rect.height;
+    const scale = getScale(cw, ch);
+    const dx = t.clientX - startX;
+    const dy = t.clientY - startY;
+    routeMapCenterX = originOffX - dx / scale;
+    routeMapCenterY = originOffY - dy / scale;
+    localRender();
+  }, { passive: false });
+
+  canvas.addEventListener('touchend', () => { dragging = false; });
+}
+
+function onInterested(vendorId) {
+  const now = Date.now();
+
+  // 1. Cooldown check
+  if (now - lastClickTime < COOLDOWN_MS) {
+    const btn = document.getElementById('ibtn-' + vendorId);
+    if (btn) btn.style.opacity = '0.5';
+    setTimeout(() => { if (btn) btn.style.opacity = ''; }, COOLDOWN_MS - (now - lastClickTime));
+    showToast('Please wait a moment.');
+    return;
+  }
+
+  // 2. Session check
+  const clicks = getSessionClicks();
+  if (clicks[vendorId]) {
+    showToast('Already noted your interest!');
+    return;
+  }
+
+  // 3. Cap check
+  const vendors = loadData();
+  const v = vendors.find(x => x.id === vendorId);
+  if (v.interests >= v.cap) {
+    showToast('Peak demand reached — simulates 50m radius limit.');
+    return;
+  }
+
+  // 4. All pass
+  lastClickTime = now;
+  v.interests += 1;
+  // Register the customer's location for this interest
+  if (!v.interestLocations) v.interestLocations = [];
+  v.interestLocations.push({ x: customerUserX, y: customerUserY, time: now });
+  markSessionClick(vendorId);
+  logAudit(v.name);
+  saveData(vendors);
+
+  // Update map if on vendor page
+  if (currentPage === 'vendorPage') {
+    renderVendorMap();
+  }
+
+  // Pulse the count
+  const countEl = document.getElementById('count-' + vendorId);
+  if (countEl) {
+    countEl.classList.remove('pulse');
+    void countEl.offsetWidth;
+    countEl.classList.add('pulse');
+  }
+}
+function onNotInterested(vendorId) {
+  const clicks = getSessionClicks();
+  if (!clicks[vendorId]) {
+    showToast('You haven\'t marked interest yet.');
+    return;
+  }
+  const vendors = loadData();
+  const v = vendors.find(x => x.id === vendorId);
+  if (v.interests > 0) {
+    v.interests -= 1;
+    // Remove the most recent interest location
+    if (v.interestLocations && v.interestLocations.length > 0) {
+      v.interestLocations.pop();
+    }
+  }
+  unmarkSessionClick(vendorId);
+  logAudit(v.name + ' ← withdrew interest');
+  saveData(vendors);
+
+  // Update map if on vendor page
+  if (currentPage === 'vendorPage') {
+    renderVendorMap();
+  }
+
+  // Pulse the count
+  const countEl = document.getElementById('count-' + vendorId);
+  if (countEl) {
+    countEl.classList.remove('pulse');
+    void countEl.offsetWidth;
+    countEl.classList.add('pulse');
+  }
+}
+
+function insightBadge(n) {
+  if (n > 5)  return '<span class="insight-badge insight-high">🔥 High Demand — Prepare more!</span>';
+  if (n >= 3) return '<span class="insight-badge insight-mod">📊 Moderate — Good pace</span>';
+  return '<span class="insight-badge insight-low">💤 Low — Stay ready</span>';
+}
+
+function renderVendorDash() {
+  const sel = document.getElementById('vendorSelect');
+  if (!sel) return;                                    // not on vendor page — skip
+  const vendors = loadData();
+
+  // Populate dropdown if empty
+  if (!sel.innerHTML.trim()) {
+    sel.innerHTML = vendors.map(v => `<option value="${v.id}">${v.name}</option>`).join('');
+  }
+
+  const selId = parseInt(sel.value) || vendors[0].id;
+  const v = vendors.find(x => x.id === selId) || vendors[0];
+
+  const isActive = v.status === 'active';
+  const hasStartLocation = v.startX != null && v.startY != null;
+  const locationHint = hasStartLocation ? '' : '<div style="margin-bottom:10px;color:#d33;font-weight:700;">Select your starting location on the map below to enable movement.</div>';
+
+  document.getElementById('vendorDash').innerHTML = `
+    <div class="card">
+      ${locationHint}
+      <div class="vendor-big-name">${v.name}</div>
+      <div class="vendor-big-item">${v.item}</div>
+
+      <div class="live-count-wrap">
+        <div class="live-count-num" id="vcount-${v.id}">${v.interests}</div>
+        <div class="live-count-lbl">locals interested right now</div>
+      </div>
+
+      ${insightBadge(v.interests)}
+
+      <div style="margin:10px 0">
+        <span class="pill ${isActive ? 'pill-active' : 'pill-closed'}">
+          ${isActive ? 'Selling Now' : 'Paused'}
+        </span>
+      </div>
+
+      <div class="toggle-wrap">
+        <label class="toggle">
+          <input type="checkbox" id="statusToggle" ${isActive ? 'checked' : ''}
+            onchange="toggleStatus(${v.id})">
+          <span class="toggle-slider"></span>
+        </label>
+        <span class="toggle-label">${isActive ? 'Active' : 'Inactive'}</span>
+      </div>
+
+      <div style="font-size:0.78rem;color:#888;margin-bottom:4px;font-weight:600">Mobility</div>
+      <div class="mobility-toggle">
+        <button class="mobility-btn ${!v.moving ? 'active-mobility' : ''}"
+          onclick="setMobility(${v.id}, false)">📍 Stationary</button>
+        <button class="mobility-btn ${v.moving ? 'active-mobility' : ''}"
+          onclick="setMobility(${v.id}, true)">🚶 Moving</button>
+      </div>
+
+      <div class="menu-grid">
+        <button class="btn btn-${v.statusLabel==='Ready to Serve'?'primary btn-menu-active':'secondary'}" onclick="setStatus(${v.id},'Ready to Serve')">✅ Ready to Serve</button>
+        <button class="btn btn-${v.statusLabel==='Running Low'?'primary btn-menu-active':'secondary'}" onclick="setStatus(${v.id},'Running Low')">⚠️ Running Low</button>
+        <button class="btn btn-${v.statusLabel==='Back in 10 min'?'primary btn-menu-active':'secondary'}" onclick="setStatus(${v.id},'Back in 10 min')">⏱ Back in 10 min</button>
+        <button class="btn btn-${v.statusLabel==='Closed for Today'?'primary btn-menu-active':'secondary'}" onclick="setStatus(${v.id},'Closed for Today')">🚫 Closed for Today</button>
+      </div>
+    </div>
+    <div id="routeMapWrap">
+      <h4>📍 Plan Your Route</h4>
+      <p>Tap on the map to add waypoints. Customers will see your planned path.</p>
+      <canvas id="routeCanvas"></canvas>
+      <div class="route-actions">
+        <button class="btn btn-secondary" id="setStartBtn-${v.id}" onclick="toggleSetStartMode(event, ${v.id})">📍 Set Start Location</button>
+        <button class="btn btn-secondary" id="planRouteBtn-${v.id}" onclick="togglePlanRouteMode(event, ${v.id})">🛣️ Plan Route</button>
+        <button class="btn btn-secondary" onclick="undoRoutePoint(event, ${v.id})">↩️ Undo Point</button>
+        <button class="btn btn-secondary" onclick="clearRoute(event, ${v.id})">🗑 Clear Route</button>
+        <button class="btn btn-primary"   onclick="saveRoute(event, ${v.id})">💾 Save Route</button>
+      </div>
+    </div>
+
+    <div class="map-grid">
+      <aside id="vendorMapSidePanel">
+        <h3>Vendor Geotracking</h3>
+        <select id="vendorMapSelect" onchange="onMapVendorSelect('vendorMapSelect')" style="width:100%;background:#1a1f2e;color:#fff;border:1px solid rgba(255,255,255,0.2);border-radius:8px;padding:8px;">
+          <option value="">Select vendor to track</option>
+        </select>
+        <button class="btn btn-secondary" style="width:100%;margin-top:10px;" onclick="centerSelectedVendor()">➡️ Center on vendor</button>
+        <label style="display:flex;align-items:center;gap:6px;font-size:0.85rem;color:#ccc;margin-top:10px;">
+          <input type="checkbox" id="vendorMapFollowToggle" onchange="toggleFollowVendor(this.checked)"> Follow vendor
+        </label>
+        <div id="vendorMapLegend" style="margin-top:18px;"></div>
+      </aside>
+      <div id="vendorMapWrap">
+        <div id="vendorMapFilterBar">
+          <label>Display Filter:</label>
+          <select id="vendorMapFilter" onchange="onVendorMapFilterChange()" style="background:#1a1f2e;color:#fff;border:1px solid rgba(255,255,255,0.2);border-radius:4px;padding:4px;font-size:0.8rem;">
+            <option value="vendors">Locate Vendors</option>
+            <option value="customers">Locate Customers</option>
+            <option value="both" selected>Locate Vendors + Customers</option>
+          </select>
+        </div>
+        <div id="vendorMapZoomBar">
+          <button class="zoom-btn" onclick="zoomMap(-1)">−</button>
+          <span id="vendorZoomLabel">1×</span>
+          <button class="zoom-btn" onclick="zoomMap(1)">+</button>
+        </div>
+        <canvas id="vendorMapCanvas"></canvas>
+      </div>
+    </div>
+  `;
+  // Init route canvas and vendor map after DOM update
+  setTimeout(() => initRouteCanvas(v), 0);
+  setTimeout(() => renderVendorMap(), 0);
+}
+
+function toggleStatus(vendorId) {
+  const vendors = loadData();
+  const v = vendors.find(x => x.id === vendorId);
+  if (v.status === 'active') {
+    v.status      = 'closed';
+    v.statusLabel = 'Closed for Today';
+  } else {
+    v.status      = 'active';
+    v.statusLabel = 'Ready to Serve';
+  }
+  saveData(vendors);
+}
+
+function setStatus(vendorId, label) {
+  const vendors = loadData();
+  const v = vendors.find(x => x.id === vendorId);
+  const activeLabels = ['Ready to Serve', 'Running Low', 'Back in 10 min'];
+  v.status      = activeLabels.includes(label) ? 'active' : 'closed';
+  v.statusLabel = label;
+  logAudit(v.name + ' → ' + label);
+  saveData(vendors);
+}
+
+function setMobility(vendorId, moving) {
+  const vendors = loadData();
+  const v = vendors.find(x => x.id === vendorId);
+  v.moving = moving;
+  saveData(vendors);
+}
+
+// ── MAP ENGINE ──
+
+// World space: 3000 x 3000 units = 3km x 3km
+// Canvas display: 448 x 380 px
+// Zoom: 1x shows full 3km, 4x shows ~750m
+
+const MAP_CW = 448, MAP_CH = 380;
+const WORLD = 3000;
+let mapZoom = 1;
+let mapTrackedVendorId = null;
+let mapFollowVendor = false;
+let mapCenterX = 1500;
+let mapCenterY = 1500;
+let mapUserX = 1500;
+let mapUserY = 1500;
+
+// Separate user positions for vendor and customer pages to avoid shared references
+let vendorUserX = 1500;
+let vendorUserY = 1500;
+let customerUserX = 1500;
+let customerUserY = 1500;
+
+// Vendor map display filter
+let vendorMapShowVendors = true;
+let vendorMapShowCustomers = true;
+
+// Route planners should have their own viewport state (info map should not move it)
+let routeMapZoom = 1;
+let routeMapCenterX = 1500;
+let routeMapCenterY = 1500;
+
+function getMapCanvasSize(canvasId = 'mapCanvas') {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return {cw: MAP_CW, ch: MAP_CH};
+  const cw = canvas.offsetWidth || MAP_CW;
+  const ch = canvas.offsetHeight || MAP_CH;
+  return {cw, ch};
+}
+
+function w2c(wx, wy, cw, ch) {
+  const scale = (cw / WORLD) * ZOOM_LEVELS[mapZoom - 1];
+  const ox = cw / 2 - mapCenterX * scale;
+  const oy = ch / 2 - mapCenterY * scale;
+  return { x: wx * scale + ox, y: wy * scale + oy };
+}
+
+function c2w(cx, cy, cw, ch) {
+  const scale = (cw / WORLD) * ZOOM_LEVELS[mapZoom - 1];
+  const ox = cw / 2 - mapCenterX * scale;
+  const oy = ch / 2 - mapCenterY * scale;
+  return { x: (cx - ox) / scale, y: (cy - oy) / scale };
+}
+
+const ZOOM_LEVELS = [1, 1.5, 2.5, 4];
+const ZOOM_LABELS = ['3km', '2km', '1.2km', '750m'];
+
+// ── STREET NETWORK (world coords) ──
+// Each road: [x1,y1, x2,y2, name]
+const STREETS = [
+  // Horizontal main roads
+  [0,500,  3000,500,  'MG Road'],
+  [0,1000, 3000,1000, 'Station Road'],
+  [0,1500, 3000,1500, 'Civil Lines Rd'],
+  [0,2000, 3000,2000, 'University Rd'],
+  [0,2500, 3000,2500, 'Nehru Marg'],
+  // Vertical main roads
+  [500,0,  500,3000,  'Kutchery Rd'],
+  [1000,0, 1000,3000, 'Thornhill Rd'],
+  [1500,0, 1500,3000, 'Elgin Rd'],
+  [2000,0, 2000,3000, 'Church Ln'],
+  [2500,0, 2500,3000, 'GT Rd'],
+  // Diagonal / connector
+  [0,0,    1500,1500, 'Old Bypass'],
+  [1500,1500, 3000,3000, 'Old Bypass'],
+];
+
+// ── LANDMARKS (world coords) ──
+const LANDMARKS = [
+  { x:1500, y:1500, label:'Chowk', icon:'⬡' },
+  { x:500,  y:500,  label:'Bus Stand', icon:'🚌' },
+  { x:2500, y:500,  label:'Market', icon:'🏪' },
+  { x:500,  y:2500, label:'Park', icon:'🌳' },
+  { x:2500, y:2500, label:'College', icon:'🏫' },
+  { x:1000, y:1000, label:'Hospital', icon:'🏥' },
+  { x:2000, y:2000, label:'Temple', icon:'🛕' },
+];
+
+function zoomMap(dir) {
+  mapZoom = Math.max(1, Math.min(4, mapZoom + dir));
+  const label = ZOOM_LABELS[mapZoom - 1];
+  const onMapLabel = document.getElementById('zoomLabel');
+  const vendorLabel = document.getElementById('vendorZoomLabel');
+  if (onMapLabel) onMapLabel.textContent = label;
+  if (vendorLabel) vendorLabel.textContent = label;
+  const lbl = document.getElementById('mapScaleLabel');
+  if (lbl) lbl.textContent = `Viewing ~${label} area · 📍 Stationary  🚶 Moving`;
+  if (currentPage === 'mapPage') renderMap();
+  if (currentPage === 'vendorPage') renderVendorMap();
+}
+
+function populateMapVendorSelect(selectId = 'mapVendorSelect') {
+  const sel = document.getElementById(selectId);
+  if (!sel) return;
+  const vendors = loadData().filter(v => v.status === 'active' && v.startX != null && v.startY != null);
+  const current = sel.value;
+  sel.innerHTML = '<option value="">Select vendor to track</option>' +
+    vendors.map(v => `<option value="${v.id}">${v.name} (${v.item})</option>`).join('');
+  if (current) sel.value = current;
+}
+
+function centerOnVendor(vendorId) {
+  if (!vendorId) return;
+  const vendors = loadData();
+  const v = vendors.find(x => x.id === vendorId);
+  if (!v) return;
+
+  if (v.startX == null || v.startY == null) {
+    showToast('Please set start location on map first.');
+    return;
+  }
+
+  if (v.x == null || v.y == null) {
+    v.x = v.startX;
+    v.y = v.startY;
+    saveData(vendors);
+  }
+
+  mapCenterX = v.x;
+  mapCenterY = v.y;
+  showToast(`Centered on ${v.name}`);
+  if (currentPage === 'mapPage') renderMap();
+  if (currentPage === 'vendorPage') renderVendorMap();
+  if (currentPage === 'customerPage') renderCustomerMap();
+}
+
+function saveVendorStartLocation(vendorId) {
+  const vendors = loadData();
+  const v = vendors.find(x => x.id === vendorId);
+  if (!v) {
+    showToast('Vendor not found.');
+    return;
+  }
+  if (vendorUserX == null || vendorUserY == null) {
+    showToast('Click the map to pick your start position first.');
+    return;
+  }
+  v.startX = vendorUserX;
+  v.startY = vendorUserY;
+  v.x = vendorUserX;
+  v.y = vendorUserY;
+  // Clear simulated locations to regenerate around new start
+  delete v.simulatedInterestLocations;
+  localStorage.removeItem('simulatedCustomerLocations_' + vendorId);
+  saveData(vendors);
+  showToast(`Start location saved for ${v.name}.`);
+  if (currentPage === 'vendorPage') renderVendorDash();
+}
+function onMapVendorSelect(selectId = 'mapVendorSelect') {
+  const sel = document.getElementById(selectId);
+  if (!sel) return;
+  const id = parseInt(sel.value, 10);
+  if (!id || Number.isNaN(id)) {
+    mapTrackedVendorId = null;
+    mapFollowVendor = false;
+    const toggle = document.getElementById(
+      selectId === 'mapVendorSelect' ? 'mapFollowToggle'
+      : selectId === 'vendorMapSelect' ? 'vendorMapFollowToggle'
+      : 'customerMapFollowToggle'
+    );
+    if (toggle) toggle.checked = false;
+    if (currentPage === 'mapPage') renderMap();
+    if (currentPage === 'vendorPage') renderVendorMap();
+    if (currentPage === 'customerPage') renderCustomerMap();
+    return;
+  }
+  mapTrackedVendorId = id;
+  mapFollowVendor = true;
+  const toggle = document.getElementById(
+      selectId === 'mapVendorSelect' ? 'mapFollowToggle'
+      : selectId === 'vendorMapSelect' ? 'vendorMapFollowToggle'
+      : 'customerMapFollowToggle'
+    );
+  if (toggle) toggle.checked = true;
+  centerOnVendor(id);
+}
+
+function onVendorMapFilterChange() {
+  const sel = document.getElementById('vendorMapFilter');
+  if (!sel) return;
+  const value = sel.value;
+  vendorMapShowVendors = value === 'vendors' || value === 'both';
+  vendorMapShowCustomers = value === 'customers' || value === 'both';
+  renderVendorMap();
+}
+
+function centerSelectedVendor() {
+  if (!mapTrackedVendorId) {
+    showToast('Select a vendor first.');
+    return;
+  }
+  centerOnVendor(mapTrackedVendorId);
+}
+
+function toggleFollowVendor(enabled) {
+  mapFollowVendor = enabled;
+  if (!enabled) {
+    mapTrackedVendorId = null;
+    const selMap = document.getElementById('mapVendorSelect');
+    const selVendor = document.getElementById('vendorMapSelect');
+    if (selMap) selMap.value = '';
+    if (selVendor) selVendor.value = '';
+  }
+  if (currentPage === 'mapPage') renderMap();
+  if (currentPage === 'vendorPage') renderVendorMap();
+}
+
+// ── PER-VENDOR MOVEMENT ──
+const moveDir = {};
+const MAP_BOUNDS_W = { minX:50, maxX:2950, minY:50, maxY:2950 };
+
+function getOrInitDir(v) {
+  if (!moveDir[v.id]) {
+    moveDir[v.id] = {
+      dx: (Math.random() - 0.5) * 40,
+      dy: (Math.random() - 0.5) * 40,
+      routeIdx: 0
+    };
+  }
+  return moveDir[v.id];
+}
+
+function tickMovingVendors() {
+  const vendors = loadData();
+  let changed = false;
+  vendors.forEach(v => {
+    if (v.status !== 'active') return;
+
+    // Ensure start location is validated
+    if (v.startX == null || v.startY == null) return;
+    if (v.x == null || v.y == null) {
+      v.x = v.startX;
+      v.y = v.startY;
+    }
+
+    if (!v.moving) return;
+    const dir = getOrInitDir(v);
+
+    // If vendor has a route, follow it
+    if (v.route && v.route.length > 1) {
+      const target = v.route[dir.routeIdx % v.route.length];
+      const dx = target.x - v.x, dy = target.y - v.y;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+      if (dist < 30) {
+        dir.routeIdx = (dir.routeIdx + 1) % v.route.length;
+      } else {
+        const speed = 18;
+        v.x += (dx / dist) * speed;
+        v.y += (dy / dist) * speed;
+      }
+    } else {
+      // Free wander
+      v.x += dir.dx;
+      v.y += dir.dy;
+      if (v.x < MAP_BOUNDS_W.minX) { v.x = MAP_BOUNDS_W.minX; dir.dx = Math.abs(dir.dx); }
+      if (v.x > MAP_BOUNDS_W.maxX) { v.x = MAP_BOUNDS_W.maxX; dir.dx = -Math.abs(dir.dx); }
+      if (v.y < MAP_BOUNDS_W.minY) { v.y = MAP_BOUNDS_W.minY; dir.dy = Math.abs(dir.dy); }
+      if (v.y > MAP_BOUNDS_W.maxY) { v.y = MAP_BOUNDS_W.maxY; dir.dy = -Math.abs(dir.dy); }
+      dir.dx += (Math.random() - 0.5) * 8;
+      dir.dy += (Math.random() - 0.5) * 8;
+      const speed = Math.sqrt(dir.dx*dir.dx + dir.dy*dir.dy);
+      if (speed > 30) { dir.dx = dir.dx/speed*30; dir.dy = dir.dy/speed*30; }
+      if (speed < 8)  { dir.dx *= 1.5; dir.dy *= 1.5; }
+    }
+    changed = true;
+  });
+  if (changed) {
+    localStorage.setItem('streetsync_data', JSON.stringify(vendors));
+    if (mapFollowVendor && mapTrackedVendorId) {
+      const tracked = vendors.find(v => v.id === mapTrackedVendorId);
+      if (tracked) {
+        mapCenterX = tracked.x;
+        mapCenterY = tracked.y;
+      }
+    }
+    if (currentPage === 'mapPage') drawMap(vendors, 'mapCanvas', 'mapLegend');
+    if (currentPage === 'vendorPage') {
+      renderVendorMap();
+      refreshVendorRouteMinimap();
+    }
+    if (currentPage === 'customerPage') renderCustomerMap();
+  }
+}
+
+// ── DRAW STREETS on any canvas/ctx ──
+function drawStreetLayer(ctx, cw, ch, toCanvas) {
+  // Background
+  ctx.fillStyle = '#1a1f2e';
+  ctx.fillRect(0, 0, cw, ch);
+
+  // City blocks (filled rectangles between roads)
+  const blockColor = '#1e2436';
+  const intersections = [500,1000,1500,2000,2500];
+  for (let i = 0; i < intersections.length - 1; i++) {
+    for (let j = 0; j < intersections.length - 1; j++) {
+      const p1 = toCanvas(intersections[i]+4, intersections[j]+4);
+      const p2 = toCanvas(intersections[i+1]-4, intersections[j+1]-4);
+      const bw = p2.x - p1.x, bh = p2.y - p1.y;
+      if (bw > 2 && bh > 2) {
+        ctx.fillStyle = blockColor;
+        ctx.fillRect(p1.x, p1.y, bw, bh);
+      }
+    }
+  }
+
+  // Roads (thick base)
+  STREETS.forEach(([x1,y1,x2,y2]) => {
+    const p1 = toCanvas(x1, y1), p2 = toCanvas(x2, y2);
+    ctx.beginPath();
+    ctx.moveTo(p1.x, p1.y);
+    ctx.lineTo(p2.x, p2.y);
+    ctx.strokeStyle = '#2c3347';
+    ctx.lineWidth = 7;
+    ctx.stroke();
+  });
+
+  // Road surface
+  STREETS.forEach(([x1,y1,x2,y2]) => {
+    const p1 = toCanvas(x1, y1), p2 = toCanvas(x2, y2);
+    ctx.beginPath();
+    ctx.moveTo(p1.x, p1.y);
+    ctx.lineTo(p2.x, p2.y);
+    ctx.strokeStyle = '#3a4060';
+    ctx.lineWidth = 4;
+    ctx.stroke();
+  });
+
+  // Centre dashes
+  ctx.setLineDash([8, 10]);
+  STREETS.forEach(([x1,y1,x2,y2]) => {
+    const p1 = toCanvas(x1, y1), p2 = toCanvas(x2, y2);
+    ctx.beginPath();
+    ctx.moveTo(p1.x, p1.y);
+    ctx.lineTo(p2.x, p2.y);
+    ctx.strokeStyle = 'rgba(255,220,100,0.18)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  });
+  ctx.setLineDash([]);
+
+  // Street labels (only show when zoomed in enough)
+  if (mapZoom >= 2) {
+    ctx.font = '9px sans-serif';
+    ctx.fillStyle = 'rgba(255,255,255,0.25)';
+    ctx.textAlign = 'center';
+    STREETS.forEach(([x1,y1,x2,y2,name]) => {
+      const mx = (x1+x2)/2, my = (y1+y2)/2;
+      const p = toCanvas(mx, my);
+      if (p.x > 0 && p.x < cw && p.y > 0 && p.y < ch) {
+        ctx.fillText(name, p.x, p.y - 3);
+      }
+    });
+  }
+}
+
+// ── DRAW LANDMARKS ──
+function drawLandmarks(ctx, cw, ch, toCanvas) {
+  LANDMARKS.forEach(lm => {
+    const p = toCanvas(lm.x, lm.y);
+    if (p.x < -20 || p.x > cw+20 || p.y < -20 || p.y > ch+20) return;
+    ctx.font = mapZoom >= 2 ? '14px sans-serif' : '10px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(lm.icon, p.x, p.y);
+    if (mapZoom >= 2) {
+      ctx.font = '8px sans-serif';
+      ctx.fillStyle = 'rgba(255,255,255,0.3)';
+      ctx.fillText(lm.label, p.x, p.y + 11);
+    }
+  });
+}
+
+const VENDOR_COLORS = ['#FF6B35','#4CAF50','#2196F3','#9C27B0','#FF9800'];
+
+function generateCustomerInterestPoints(vendor, count) {
+  if (vendor.interestLocations && vendor.interestLocations.length > 0) {
+    // Use actual registered locations (real customer clicks)
+    return vendor.interestLocations.slice(0, count).map(loc => ({ x: loc.x, y: loc.y }));
+  } else {
+    // Use simulated locations - load from localStorage or generate once
+    const storageKey = 'simulatedCustomerLocations_' + vendor.id;
+    let points = [];
+    try {
+      const stored = localStorage.getItem(storageKey);
+      if (stored) {
+        points = JSON.parse(stored);
+      }
+    } catch (e) {
+      // Ignore parse errors
+    }
+    
+    if (points.length < count) {
+      // Need more points - generate additional random points
+      const centerX = (vendor.startX != null) ? vendor.startX : (vendor.id * 600 + 200) % WORLD;
+      const centerY = (vendor.startY != null) ? vendor.startY : (vendor.id * 400 + 300) % WORLD;
+      for (let i = points.length; i < count; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const distance = 50 + Math.random() * 200; // 50-250 units
+        const x = centerX + Math.cos(angle) * distance;
+        const y = centerY + Math.sin(angle) * distance;
+        points.push({
+          x: Math.max(0, Math.min(WORLD, x)),
+          y: Math.max(0, Math.min(WORLD, y))
+        });
+      }
+      // Save to localStorage
+      try {
+        localStorage.setItem(storageKey, JSON.stringify(points));
+      } catch (e) {
+        // Ignore storage errors
+      }
+    }
+    
+    return points.slice(0, count);
+  }
+}
+
+function drawCustomerInterestPoints(ctx, vendors, toCanvas, cw, ch, selectedVendor = null) {
+  if (!selectedVendor || selectedVendor.interests <= 0) return;
+  const points = generateCustomerInterestPoints(selectedVendor, selectedVendor.interests);
+  points.forEach(point => {
+    const p = toCanvas(point.x, point.y);
+    if (p.x < -10 || p.x > cw+10 || p.y < -10 || p.y > ch+10) return;
+
+    // Small dot for customer interest
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 8, 0, Math.PI*2);
+    ctx.fillStyle = 'rgba(255,107,53,0.7)'; // Orange like YOU marker
+    ctx.fill();
+
+    // Small label
+    ctx.font = '6px sans-serif';
+    ctx.fillStyle = '#fff';
+    ctx.textAlign = 'center';
+    ctx.fillText('👤', p.x, p.y + 4);
+  });
+}
+
+function drawVendors(ctx, vendors, toCanvas, cw, ch, showVendors = true) {
+  if (!showVendors) return;
+  vendors
+    .filter(v => v.status === 'active' && v.startX != null && v.startY != null)
+    .forEach((v, i) => {
+      const color = VENDOR_COLORS[i % VENDOR_COLORS.length];
+    const p = toCanvas(v.x, v.y);
+    if (p.x < -20 || p.x > cw+20 || p.y < -20 || p.y > ch+20) return;
+    const isClosed = v.status === 'closed';
+
+    // Draw route path for moving vendors
+    if (v.route && v.route.length > 1 && !isClosed) {
+      ctx.beginPath();
+      const rp0 = toCanvas(v.route[0].x, v.route[0].y);
+      ctx.moveTo(rp0.x, rp0.y);
+      v.route.forEach(wp => {
+        const rp = toCanvas(wp.x, wp.y);
+        ctx.lineTo(rp.x, rp.y);
+      });
+      ctx.strokeStyle = color + '55';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([5, 6]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Waypoint dots
+      v.route.forEach(wp => {
+        const rp = toCanvas(wp.x, wp.y);
+        ctx.beginPath();
+        ctx.arc(rp.x, rp.y, 3, 0, Math.PI*2);
+        ctx.fillStyle = color + '88';
+        ctx.fill();
+      });
+    }
+
+    const isTracked = mapTrackedVendorId === v.id;
+
+    // Glow for active moving
+    if (v.moving && !isClosed) {
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 14, 0, Math.PI*2);
+      ctx.fillStyle = color + '22';
+      ctx.fill();
+    }
+
+    // Highlight tracked vendor
+    if (isTracked) {
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 18, 0, Math.PI*2);
+      ctx.strokeStyle = '#ffff0077';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+    }
+
+    // Outer ring
+    if (!isClosed) {
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 11, 0, Math.PI*2);
+      ctx.strokeStyle = color + '88';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+
+    // Pin
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 8, 0, Math.PI*2);
+    ctx.fillStyle = isClosed ? '#444' : color;
+    ctx.fill();
+
+    // Icon inside
+    ctx.font = 'bold 9px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#fff';
+    ctx.fillText(v.moving && !isClosed ? '▶' : '●', p.x, p.y + 3);
+
+    // Name label
+    const shortName = v.name.split(' ')[0];
+    ctx.font = 'bold 10px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = 'rgba(0,0,0,0.7)';
+    ctx.fillText(shortName, p.x+1, p.y - 13);
+    ctx.fillStyle = isClosed ? 'rgba(255,255,255,0.3)' : '#fff';
+    ctx.fillText(shortName, p.x, p.y - 14);
+
+    // Interest badge
+    if (v.interests > 0 && !isClosed) {
+      ctx.beginPath();
+      ctx.arc(p.x + 9, p.y - 9, 6, 0, Math.PI*2);
+      ctx.fillStyle = '#FF6B35';
+      ctx.fill();
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 7px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(v.interests, p.x + 9, p.y - 6);
+    }
+  });
+}
+
+function drawMap(vendors, canvasId = 'mapCanvas', legendId = 'mapLegend', selectedVendor = null) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  const dpr = window.devicePixelRatio || 1;
+  const {cw, ch} = getMapCanvasSize(canvasId);
+  canvas.style.width = '100%';
+  canvas.style.height = ch + 'px';
+  if (canvas.width !== Math.round(cw * dpr) || canvas.height !== Math.round(ch * dpr)) {
+    canvas.width = Math.round(cw * dpr);
+    canvas.height = Math.round(ch * dpr);
+  }
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  const toCanvas = (wx, wy) => w2c(wx, wy, cw, ch);
+
+  drawStreetLayer(ctx, cw, ch, toCanvas);
+  drawLandmarks(ctx, cw, ch, toCanvas);
+
+  const youX = currentPage === 'vendorPage' ? vendorUserX : customerUserX;
+  const youY = currentPage === 'vendorPage' ? vendorUserY : customerUserY;
+  const you = toCanvas(youX, youY);
+  ctx.beginPath();
+  ctx.arc(you.x, you.y, 20, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(255,107,53,0.06)';
+  ctx.fill();
+
+  if (mapTrackedVendorId) {
+    const tracked = vendors.find(v => v.id === mapTrackedVendorId);
+    if (tracked) {
+      const tv = toCanvas(tracked.x, tracked.y);
+      ctx.setLineDash([6, 6]);
+      ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+      ctx.lineWidth = 1.8;
+      ctx.beginPath();
+      ctx.moveTo(you.x, you.y);
+      ctx.lineTo(tv.x, tv.y);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = 'rgba(255,255,255,0.85)';
+      ctx.font = '10px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('▶ tracking', (you.x + tv.x) / 2, (you.y + tv.y) / 2 - 8);
+    }
+  }
+
+  ctx.beginPath();
+  ctx.arc(you.x, you.y, 6, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(255,107,53,0.6)';
+  ctx.fill();
+  ctx.font = '8px sans-serif';
+  ctx.fillStyle = 'rgba(255,255,255,0.4)';
+  ctx.textAlign = 'center';
+  ctx.fillText('YOU', you.x, you.y + 17);
+
+  drawVendors(ctx, vendors, toCanvas, cw, ch, currentPage !== 'vendorPage' || vendorMapShowVendors);
+
+  if (currentPage === 'vendorPage' && vendorMapShowCustomers) {
+    drawCustomerInterestPoints(ctx, vendors, toCanvas, cw, ch, selectedVendor);
+  }
+
+  const legend = document.getElementById(legendId);
+  if (legend) {
+    let legendHtml = vendors.map((v, i) => {
+      const color = VENDOR_COLORS[i % VENDOR_COLORS.length];
+      const isClosed = v.status === 'closed';
+      const hasRoute = v.route && v.route.length > 1;
+      return `<div class="map-legend-item">
+        <div class="map-legend-dot" style="background:${isClosed ? '#555' : color}"></div>
+        <span>${v.name.split(' ')[0]} ${v.moving ? '🚶' : '📍'} ${isClosed ? '<em style="opacity:.4">closed</em>' : v.statusLabel}${hasRoute ? ' 🗺️' : ''}</span>
+      </div>`;
+    }).join('');
+
+    if (currentPage === 'vendorPage' && vendorMapShowCustomers) {
+      legendHtml += `<div class="map-legend-item">
+        <div class="map-legend-dot" style="background:rgba(255,107,53,0.7)"></div>
+        <span>Customer Interest 👤</span>
+      </div>`;
+    }
+
+    legend.innerHTML = legendHtml;
+  }
+}
+
+function renderMap() {
+  const vendors = loadData();
+  populateMapVendorSelect('mapVendorSelect');
+
+  // Initialize customer position if not set (avoid linking to vendor)
+  if (customerUserX === 1500 && customerUserY === 1500) {
+    // Default to center if not customized
+    customerUserX = 1500;
+    customerUserY = 1500;
+  }
+
+  drawMap(vendors, 'mapCanvas', 'mapLegend');
+  ensureMapSize('mapCanvas');
+  attachMapInteractions('mapCanvas');
+}
+
+let vendorMapTrackedVendorId = null;
+
+function renderVendorMap() {
+  const vendors = loadData();
+  populateMapVendorSelect('vendorMapSelect');
+
+  // Set filter select value
+  const filterSel = document.getElementById('vendorMapFilter');
+  if (filterSel) {
+    if (vendorMapShowVendors && vendorMapShowCustomers) filterSel.value = 'both';
+    else if (vendorMapShowVendors) filterSel.value = 'vendors';
+    else if (vendorMapShowCustomers) filterSel.value = 'customers';
+  }
+
+  const vendorSel = document.getElementById('vendorSelect');
+  const vendorId = vendorSel ? parseInt(vendorSel.value, 10) : null;
+  const selected = vendors.find(v => v.id === vendorId) || vendors.find(v => v.id === mapTrackedVendorId);
+
+  // Only recenter when vendor selection changes, not on every render during drag
+  if (selected && selected.id !== vendorMapTrackedVendorId) {
+    vendorMapTrackedVendorId = selected.id;
+    mapCenterX = selected.startX || selected.x || 1500;
+    mapCenterY = selected.startY || selected.y || 1500;
+  }
+
+  if (selected && selected.x != null && selected.y != null) {
+    vendorUserX = selected.x;
+    vendorUserY = selected.y;
+  } else {
+    showToast('Set your vendor location by tapping on the map.');
+  }
+
+  drawMap(vendors, 'vendorMapCanvas', 'vendorMapLegend', selected);
+  ensureMapSize('vendorMapCanvas');
+  attachMapInteractions('vendorMapCanvas');
+}
+
+function renderCustomerMap() {
+  const vendors = loadData();
+  populateMapVendorSelect('customerMapVendorSelect');
+
+  // Initialize customer position if not set (avoid linking to vendor)
+  if (customerUserX === 1500 && customerUserY === 1500) {
+    // Default to center if not customized
+    customerUserX = 1500;
+    customerUserY = 1500;
+  }
+
+  drawMap(vendors, 'customerMapCanvas', 'customerMapLegend');
+  ensureMapSize('customerMapCanvas');
+  attachMapInteractions('customerMapCanvas');
+}
+
+function ensureMapSize(canvasId) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  canvas.style.width = '100%';
+  if (window.L && window.mapInstance && typeof window.mapInstance.invalidateSize === 'function') {
+    window.mapInstance.invalidateSize();
+  }
+}
+
+function ensureRouteMapSize() {
+  const canvas = document.getElementById('routeCanvas');
+  if (!canvas) return;
+  canvas.style.width = '100%';
+  const cssW = canvas.offsetWidth || 400;
+  const cssH = canvas.offsetHeight || 240;
+  if (canvas.width !== Math.round(cssW * (window.devicePixelRatio || 1)) ||
+      canvas.height !== Math.round(cssH * (window.devicePixelRatio || 1))) {
+    canvas.width = Math.round(cssW * (window.devicePixelRatio || 1));
+    canvas.height = Math.round(cssH * (window.devicePixelRatio || 1));
+  }
+  const sel = document.getElementById('vendorSelect');
+  if (!sel) return;
+  const vendors = loadData();
+  const selId = parseInt(sel.value, 10);
+  const v = vendors.find(x => x.id === selId) || vendors[0];
+  if (v) {
+    drawRouteCanvas(v, canvas, cssW, cssH, window.devicePixelRatio || 1);
+  }
+}
+
+// ── ROUTE MINI-MAP (vendor dashboard) ──
+let draftRoute = []; // waypoints being drawn, not yet saved
+let routeSettingMode = null; // 'start', 'route', or null
+
+function initRouteCanvas(v) {
+  const canvas = document.getElementById('routeCanvas');
+  if (!canvas) return;
+
+  // Size the canvas based on the actual rendered container at the moment
+  const cssW = canvas.offsetWidth || 400;
+  const cssH = canvas.offsetHeight || 240;
+  // Keep the CSS height consistent as well
+  canvas.style.height = cssH + 'px';
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width  = cssW * dpr;
+  canvas.height = cssH * dpr;
+
+  // Load existing route as draft
+  if (v.route && v.route.length) {
+    draftRoute = JSON.parse(JSON.stringify(v.route));
+  } else {
+    draftRoute = [];
+  }
+
+  // If no route yet, initialize from current vendor location (prefer live position over start defaults)
+  const currentRouteX = (v.x != null && v.y != null) ? v.x : v.startX;
+  const currentRouteY = (v.x != null && v.y != null) ? v.y : v.startY;
+  if ((currentRouteX != null && currentRouteY != null) && (!draftRoute.length || draftRoute[0].x !== currentRouteX || draftRoute[0].y !== currentRouteY)) {
+    draftRoute.unshift({ x: currentRouteX, y: currentRouteY });
+  }
+
+  // Initialize route viewport around selected vendor (avoid empty map centered at 0,0)
+  routeMapCenterX = v.x != null ? v.x : (v.startX != null ? v.startX : 1500);
+  routeMapCenterY = v.y != null ? v.y : (v.startY != null ? v.startY : 1500);
+  routeMapZoom = 1;
+
+  drawRouteCanvas(v, canvas, cssW, cssH, dpr);
+  attachRouteMapInteractions('routeCanvas');
+  ensureRouteMapSize();
+
+  // Tap to set start location or add waypoint on route mini-map
+  canvas.onclick = function(e) {
+    // ignore UI overlay clicks
+    const rect = canvas.getBoundingClientRect();
+    if (e.clientX < rect.left || e.clientX > rect.right || e.clientY < rect.top || e.clientY > rect.bottom) return;
+
+    const cx = (e.clientX - rect.left);
+    const cy = (e.clientY - rect.top);
+    const scaleX = (cssW / WORLD);
+    const scaleY = (cssH / WORLD);
+    const wx = cx / scaleX;
+    const wy = cy / scaleY;
+
+    if (routeSettingMode === 'start') {
+      // Set start location
+      v.startX = Math.round(wx);
+      v.startY = Math.round(wy);
+      v.x = Math.round(wx);
+      v.y = Math.round(wy);
+      const vendors = loadData();
+      // Update the vendor in the array
+      const idx = vendors.findIndex(vend => vend.id === v.id);
+      if (idx >= 0) {
+        vendors[idx] = v;
+        saveData(vendors);
+      }
+      routeSettingMode = null;
+      updateRouteButtons(v.id);
+      showToast('Start location set.');
+      // Re-init to update draftRoute with new start
+      initRouteCanvas(v);
+    } else if (routeSettingMode === 'route') {
+      // Add waypoint
+      if (v.startX == null || v.startY == null) {
+        showToast('Please set your start location first.');
+        return;
+      }
+
+      draftRoute.push({ x: Math.round(wx), y: Math.round(wy) });
+      drawRouteCanvas(v, canvas, cssW, cssH, dpr);
+      showToast('Waypoint added — tap Save Route to confirm.');
+    } else {
+      showToast('Activate a mode first: Set Start Location or Plan Route.');
+    }
+  };
+
+  updateRouteButtons(v.id);
+}
+
+function drawRouteCanvas(v, canvas, cssW, cssH, dpr) {
+  if (!canvas || !v) return;
+
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+
+  const cw = cssW || canvas.offsetWidth || 400;
+  const ch = cssH || canvas.offsetHeight || 240;
+
+  // Keep internal canvas pixel dimensions in sync with CSS box
+  if (canvas.width !== Math.round(cw * dpr) || canvas.height !== Math.round(ch * dpr)) {
+    canvas.width = Math.round(cw * dpr);
+    canvas.height = Math.round(ch * dpr);
+  }
+
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  // Mini route map uses routeMap viewport state (pan/zoom independent from vendor map)
+  const routeScale = (cw / WORLD) * ZOOM_LEVELS[routeMapZoom - 1];
+  const routeOx = cw / 2 - routeMapCenterX * routeScale;
+  const routeOy = ch / 2 - routeMapCenterY * routeScale;
+  const toMini = (wx, wy) => ({
+    x: wx * routeScale + routeOx,
+    y: wy * routeScale + routeOy
+  });
+
+  drawStreetLayer(ctx, cw, ch, toMini);
+
+  // Draw landmarks small
+  LANDMARKS.forEach(lm => {
+    const p = toMini(lm.x, lm.y);
+    ctx.font = '9px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = 'rgba(255,255,255,0.35)';
+    ctx.fillText(lm.icon, p.x, p.y);
+  });
+
+  // Vendor current position
+  const vp = toMini(v.x, v.y);
+  ctx.beginPath();
+  ctx.arc(vp.x, vp.y, 6, 0, Math.PI*2);
+  ctx.fillStyle = '#FF6B35';
+  ctx.fill();
+  ctx.font = 'bold 8px sans-serif';
+  ctx.fillStyle = '#fff';
+  ctx.textAlign = 'center';
+  ctx.fillText('YOU', vp.x, vp.y - 9);
+
+  // Show customer interest points for selected vendor in route map
+  if (v.interests > 0) {
+    const custPoints = generateCustomerInterestPoints(v, v.interests);
+    custPoints.forEach(pt => {
+      const cp = toMini(pt.x, pt.y);
+      // only draw points around vendor area, should already be close
+      ctx.beginPath();
+      ctx.arc(cp.x, cp.y, 8, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(0, 200, 255, 0.85)';
+      ctx.fill();
+      ctx.font = '6px sans-serif';
+      ctx.fillStyle = '#fff';
+      ctx.textAlign = 'center';
+      ctx.fillText('🧍', cp.x, cp.y + 4);
+    });
+  }
+
+  // Draft route
+  if (draftRoute.length > 0) {
+    ctx.beginPath();
+    const fp = toMini(draftRoute[0].x, draftRoute[0].y);
+    ctx.moveTo(fp.x, fp.y);
+    draftRoute.forEach(wp => {
+      const p = toMini(wp.x, wp.y);
+      ctx.lineTo(p.x, p.y);
+    });
+    ctx.strokeStyle = '#FF6B35aa';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([5,5]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    draftRoute.forEach((wp, idx) => {
+      const p = toMini(wp.x, wp.y);
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 4, 0, Math.PI*2);
+      ctx.fillStyle = '#FF6B35';
+      ctx.fill();
+      ctx.font = 'bold 7px sans-serif';
+      ctx.fillStyle = '#fff';
+      ctx.textAlign = 'center';
+      ctx.fillText(idx+1, p.x, p.y + 2.5);
+    });
+  }
+}
+
+function clearRoute(event, vendorId) {
+  if (event) { event.preventDefault(); event.stopPropagation(); }
+  const vendors = loadData();
+  const v = vendors.find(x => x.id === vendorId);
+  if (!v) return;
+
+  // Keep current location as the starting route point (live position), fallback to start location
+  if (v.x != null && v.y != null) {
+    draftRoute = [{ x: v.x, y: v.y }];
+  } else if (v.startX != null && v.startY != null) {
+    draftRoute = [{ x: v.startX, y: v.startY }];
+  } else {
+    draftRoute = [];
+  }
+
+  const canvas = document.getElementById('routeCanvas');
+  if (canvas) {
+    const cssW = canvas.offsetWidth || 400;
+    const cssH = canvas.offsetHeight || 200;
+    drawRouteCanvas(v, canvas, cssW, cssH, window.devicePixelRatio || 1);
+  }
+  showToast('Route cleared, start point preserved.');
+}
+
+function undoRoutePoint(event, vendorId) {
+  if (event) { event.preventDefault(); event.stopPropagation(); }
+  const vendors = loadData();
+  const v = vendors.find(x => x.id === vendorId);
+  if (!v) return;
+
+  if (!draftRoute || draftRoute.length <= 1) {
+    showToast('No additional waypoint to undo.');
+    return;
+  }
+
+  draftRoute.pop();
+
+  const canvas = document.getElementById('routeCanvas');
+  if (canvas) {
+    const cssW = canvas.offsetWidth || 400;
+    const cssH = canvas.offsetHeight || 200;
+    drawRouteCanvas(v, canvas, cssW, cssH, window.devicePixelRatio || 1);
+  }
+  showToast('Last waypoint removed.');
+}
+
+function saveRoute(event, vendorId) {
+  if (event) { event.preventDefault(); event.stopPropagation(); }
+  if (draftRoute.length < 2) {
+    showToast('Add at least 2 waypoints to set a route.');
+    return;
+  }
+  const vendors = loadData();
+  const v = vendors.find(x => x.id === vendorId);
+  if (!v) return;
+  v.route = JSON.parse(JSON.stringify(draftRoute));
+  if (moveDir[vendorId]) moveDir[vendorId].routeIdx = 0;
+  saveData(vendors);
+  showToast('Route saved! Customers can now see your path.');
+
+  // Keep minimap live for vendor page
+  if (currentPage === 'vendorPage') refreshVendorRouteMinimap();
+}
+
+function refreshVendorRouteMinimap() {
+  if (currentPage !== 'vendorPage') return;
+  const sel = document.getElementById('vendorSelect');
+  if (!sel) return;
+  const vendors = loadData();
+  const selId = parseInt(sel.value, 10);
+  const v = vendors.find(x => x.id === selId) || vendors[0];
+  if (!v) return;
+
+  const canvas = document.getElementById('routeCanvas');
+  if (!canvas) return;
+
+  const cssW = canvas.offsetWidth || 400;
+  const cssH = canvas.offsetHeight || 200;
+  drawRouteCanvas(v, canvas, cssW, cssH, window.devicePixelRatio || 1);
+}
+
+function toggleSetStartMode(event, vendorId) {
+  if (event) { event.preventDefault(); event.stopPropagation(); }
+  if (routeSettingMode === 'start') {
+    routeSettingMode = null;
+    updateRouteButtons(vendorId);
+    showToast('Set start location mode deactivated.');
+  } else {
+    routeSettingMode = 'start';
+    updateRouteButtons(vendorId);
+    showToast('Click on the route map to set your start location.');
+  }
+}
+
+function togglePlanRouteMode(event, vendorId) {
+  if (event) { event.preventDefault(); event.stopPropagation(); }
+  if (routeSettingMode === 'route') {
+    routeSettingMode = null;
+    updateRouteButtons(vendorId);
+    showToast('Plan route mode deactivated.');
+  } else {
+    routeSettingMode = 'route';
+    updateRouteButtons(vendorId);
+    showToast('Click on the route map to add waypoints.');
+  }
+}
+
+function updateRouteButtons(vendorId) {
+  const setStartBtn = document.getElementById(`setStartBtn-${vendorId}`);
+  const planRouteBtn = document.getElementById(`planRouteBtn-${vendorId}`);
+  if (setStartBtn) {
+    if (routeSettingMode === 'start') {
+      setStartBtn.classList.add('active-mode');
+    } else {
+      setStartBtn.classList.remove('active-mode');
+    }
+  }
+  if (planRouteBtn) {
+    if (routeSettingMode === 'route') {
+      planRouteBtn.classList.add('active-mode');
+    } else {
+      planRouteBtn.classList.remove('active-mode');
+    }
+  }
+}
+
+// Movement tick
+let mapTickInterval = null;
+function startMapTick() {
+  if (mapTickInterval) return;
+  mapTickInterval = setInterval(tickMovingVendors, 600);
+}
+startMapTick();
+
+function showOverlay() {
+  const log = loadAudit();
+  const list = document.getElementById('auditList');
+  const recent = log.slice(-5).reverse();
+  if (!recent.length) {
+    list.innerHTML = '<li>No activity logged yet.</li>';
+  } else {
+    list.innerHTML = recent.map(e => {
+      const t = new Date(e.ts);
+      const time = t.toTimeString().slice(0,8);
+      const sid = (e.session || '').slice(0,8);
+      return `<li>📍 ${e.vendor} &nbsp;|&nbsp; ${time} &nbsp;|&nbsp; ${sid}</li>`;
+    }).join('');
+  }
+  document.getElementById('overlay').classList.add('show');
+}
+
+function hideOverlay() {
+  document.getElementById('overlay').classList.remove('show');
+}
+
+function confirmReset() {
+  // Clear all streetsync keys except session ID itself
+  const session = getSession();
+  const keysToRemove = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (k && k.startsWith('streetsync_') && k !== 'streetsync_session') {
+      keysToRemove.push(k);
+    }
+  }
+  keysToRemove.forEach(k => localStorage.removeItem(k));
+  location.reload();
+}
+getSession();   // ensure session exists
+loadData();     // ensure data seeded
+</script>
+</body>
+</html>
