@@ -34,6 +34,7 @@
 @media (min-width: 1024px) {
   html, body { background: #222; }
   .page { max-width: var(--max-w); margin: 0 auto; }
+  #customerPage { max-width: min(1480px, calc(100vw - 48px)); }
   body { padding: 16px 24px; }
   .footer { max-width: var(--max-w); margin: 0 auto; left: auto; right: auto; }
 }
@@ -299,6 +300,12 @@ p  { line-height: 1.55; }
   margin-top: 12px;
   gap: 8px;
 }
+.vendor-card-footer .btn,
+.vendor-card-footer .btn-not-interested {
+  flex: 1 1 0;
+  min-width: 0;
+  text-align: center;
+}
 
 /* ── VENDOR DASHBOARD ── */
 #vendorSelect {
@@ -470,14 +477,36 @@ p  { line-height: 1.55; }
   margin-top: 14px;
 }
 
+#customerPage .map-grid {
+  grid-template-columns: minmax(380px, 440px) minmax(0, 1fr);
+  gap: 10px;
+  align-items: stretch;
+}
+
 #customerVendorPanel {
   flex: 0 1 auto;
   width: auto;
+  min-width: 340px;
 }
 
 #customerMapWrap {
   flex: 1 1 auto;
   width: auto;
+}
+#customerPage #customerVendorPanel {
+  min-width: 0;
+  width: 100%;
+  padding: 16px;
+  background:
+    linear-gradient(180deg, rgba(28,34,53,0.98) 0%, rgba(21,26,42,0.98) 100%);
+  border: 1px solid rgba(255,255,255,0.1);
+}
+#customerPage #customerMapWrap {
+  min-width: 0;
+  background:
+    radial-gradient(circle at top left, rgba(255,107,53,0.08), transparent 30%),
+    #161c2b;
+  border: 1px solid rgba(255,255,255,0.08);
 }
 #mapSidePanel, #vendorMapSidePanel, #customerVendorPanel {
   flex: 0 1 35%;
@@ -508,12 +537,43 @@ p  { line-height: 1.55; }
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 10px;
   margin-bottom: 10px;
 }
 #customerVendorPanel .panel-top h3 { margin: 0; color: #fff; }
 #customerVendorPanel .panel-top .btn {
   padding: 6px 12px;
   font-size: 0.76rem;
+}
+.customer-panel-controls {
+  margin-bottom: 14px;
+  padding: 12px;
+  border-radius: 14px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.08);
+}
+.customer-panel-controls select {
+  width: 100%;
+  background: rgba(255,255,255,0.03);
+  color: #fff;
+  border: 1px solid rgba(255,255,255,0.16);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+.customer-panel-controls .btn {
+  width: 100%;
+  margin-top: 10px;
+}
+.customer-follow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: #d7dceb;
+  margin-top: 10px;
+}
+.customer-follow input {
+  accent-color: var(--saffron);
 }
 #mapSidePanel h3, #vendorMapSidePanel h3 {
   margin-bottom: 12px;
@@ -537,6 +597,21 @@ p  { line-height: 1.55; }
   min-height: 420px;
   max-height: 80vh;
   cursor: crosshair;
+}
+.map-zoom-bar {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: rgba(18, 23, 39, 0.82);
+  backdrop-filter: blur(8px);
+  z-index: 5;
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: 0 8px 18px rgba(0,0,0,0.22);
 }
 @media (max-width: 1200px) {
   #mapCanvas, #vendorMapCanvas, #customerMapCanvas {
@@ -590,12 +665,20 @@ p  { line-height: 1.55; }
   color: rgba(255,255,255,0.5);
   font-weight: 700;
 }
-#mapLegend, #vendorMapLegend {
+#mapLegend, #vendorMapLegend, #customerMapLegend {
   padding: 10px 14px;
   border-top: 1px solid rgba(255,255,255,0.06);
   display: flex;
   flex-wrap: wrap;
   gap: 6px 14px;
+}
+#customerMapLegend {
+  margin-top: 14px;
+  padding: 12px 0 0;
+}
+.customer-ctrl-panel .card {
+  margin-bottom: 12px;
+  border: 1px solid rgba(0,0,0,0.04);
 }
 .map-legend-item {
   display: flex;
@@ -720,17 +803,17 @@ p  { line-height: 1.55; }
         <h3>Vendors Near You</h3>
         <button id="customerPanelToggle" class="btn btn-secondary" onclick="toggleCustomerVendorPanel()">⇔</button>
       </div>
-      <div style="margin-bottom:8px;">
-        <select id="customerMapVendorSelect" onchange="onMapVendorSelect('customerMapVendorSelect')" style="width:100%;background:#1a1f2e;color:#fff;border:1px solid rgba(255,255,255,0.2);border-radius:8px;padding:8px;">
+      <div class="customer-panel-controls">
+        <select id="customerMapVendorSelect" onchange="onMapVendorSelect('customerMapVendorSelect')">
           <option value="">Track vendor on map</option>
         </select>
         <button class="btn btn-secondary" style="width:100%;margin-top:8px;" onclick="centerSelectedVendor()">➡️ Center on selected</button>
-        <label style="display:flex;align-items:center;gap:6px;font-size:0.85rem;color:#ccc;margin-top:8px;">
+        <label class="customer-follow">
           <input type="checkbox" id="customerMapFollowToggle" onchange="toggleFollowVendor(this.checked)"> Follow selected vendor
         </label>
       </div>
       <div id="vendorList"></div>
-      <div id="customerMapLegend" style="margin-top:12px;"></div>
+      <div id="customerMapLegend"></div>
     </aside>
     <div id="customerMapWrap" class="map-wrap">
       <div id="customerMapZoomBar" class="map-zoom-bar">
@@ -1063,6 +1146,7 @@ function attachMapInteractions(canvasId) {
   canvas.style.touchAction = 'none';
 
   let dragging = false;
+  let movedDuringGesture = false;
   let startX = 0, startY = 0;
   let originOffX = mapCenterX, originOffY = mapCenterY;
 
@@ -1089,6 +1173,7 @@ function attachMapInteractions(canvasId) {
   canvas._mapMouseDown = (e) => {
     e.preventDefault();
     dragging = true;
+    movedDuringGesture = false;
     startX = e.clientX;
     startY = e.clientY;
     originOffX = mapCenterX;
@@ -1104,6 +1189,7 @@ function attachMapInteractions(canvasId) {
     const scale = getScale(cw, ch);
     const dx = e.clientX - startX;
     const dy = e.clientY - startY;
+    if (Math.abs(dx) > 3 || Math.abs(dy) > 3) movedDuringGesture = true;
     mapCenterX = originOffX - dx / scale;
     mapCenterY = originOffY - dy / scale;
     localRender();
@@ -1156,6 +1242,7 @@ function attachMapInteractions(canvasId) {
     if (e.touches.length === 1) {
       const t = e.touches[0];
       dragging = true;
+      movedDuringGesture = false;
       startX = t.clientX;
       startY = t.clientY;
       originOffX = mapCenterX;
@@ -1174,6 +1261,7 @@ function attachMapInteractions(canvasId) {
     const scale = getScale(cw, ch);
     const dx = t.clientX - startX;
     const dy = t.clientY - startY;
+    if (Math.abs(dx) > 3 || Math.abs(dy) > 3) movedDuringGesture = true;
     mapCenterX = originOffX - dx / scale;
     mapCenterY = originOffY - dy / scale;
     localRender();
@@ -1186,8 +1274,11 @@ function attachMapInteractions(canvasId) {
   canvas.addEventListener('touchend', canvas._mapTouchEnd);
 
   canvas._mapClick = (e) => {
-    if (dragging) return; // Ignore clicks that are part of drags
-    if (currentPage === 'customerPage' || currentPage === 'mapPage') {
+    if (dragging || movedDuringGesture) {
+      movedDuringGesture = false;
+      return;
+    }
+    if (currentPage === 'mapPage') {
       const rect = canvas.getBoundingClientRect();
       const cw = rect.width;
       const ch = rect.height;
@@ -1977,42 +2068,47 @@ function drawCustomerInterestPoints(ctx, vendors, toCanvas, cw, ch, selectedVend
   });
 }
 
+function drawVendorRoute(ctx, vendor, color, toCanvas) {
+  if (!vendor.route || vendor.route.length < 2) return;
+
+  ctx.beginPath();
+  const startPoint = toCanvas(vendor.route[0].x, vendor.route[0].y);
+  ctx.moveTo(startPoint.x, startPoint.y);
+  vendor.route.forEach(wp => {
+    const routePoint = toCanvas(wp.x, wp.y);
+    ctx.lineTo(routePoint.x, routePoint.y);
+  });
+
+  ctx.strokeStyle = color + (vendor.status === 'closed' ? '35' : '55');
+  ctx.lineWidth = vendor.status === 'closed' ? 1.5 : 2;
+  ctx.setLineDash(vendor.status === 'closed' ? [4, 7] : [5, 6]);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  vendor.route.forEach(wp => {
+    const routePoint = toCanvas(wp.x, wp.y);
+    ctx.beginPath();
+    ctx.arc(routePoint.x, routePoint.y, 3, 0, Math.PI * 2);
+    ctx.fillStyle = color + (vendor.status === 'closed' ? '55' : '88');
+    ctx.fill();
+  });
+}
+
 function drawVendors(ctx, vendors, toCanvas, cw, ch, showVendors = true) {
   if (!showVendors) return;
   vendors
-    .filter(v => v.status === 'active' && v.startX != null && v.startY != null)
+    .filter(v => (v.x != null && v.y != null) || (v.startX != null && v.startY != null))
     .forEach((v, i) => {
       const color = VENDOR_COLORS[i % VENDOR_COLORS.length];
-    const p = toCanvas(v.x, v.y);
-    if (p.x < -20 || p.x > cw+20 || p.y < -20 || p.y > ch+20) return;
-    const isClosed = v.status === 'closed';
+      const routeColor = mapTrackedVendorId === v.id ? '#FFD54F' : color;
+      drawVendorRoute(ctx, v, routeColor, toCanvas);
 
-    // Draw route path for moving vendors
-    if (v.route && v.route.length > 1 && !isClosed) {
-      ctx.beginPath();
-      const rp0 = toCanvas(v.route[0].x, v.route[0].y);
-      ctx.moveTo(rp0.x, rp0.y);
-      v.route.forEach(wp => {
-        const rp = toCanvas(wp.x, wp.y);
-        ctx.lineTo(rp.x, rp.y);
-      });
-      ctx.strokeStyle = color + '55';
-      ctx.lineWidth = 2;
-      ctx.setLineDash([5, 6]);
-      ctx.stroke();
-      ctx.setLineDash([]);
-
-      // Waypoint dots
-      v.route.forEach(wp => {
-        const rp = toCanvas(wp.x, wp.y);
-        ctx.beginPath();
-        ctx.arc(rp.x, rp.y, 3, 0, Math.PI*2);
-        ctx.fillStyle = color + '88';
-        ctx.fill();
-      });
-    }
-
-    const isTracked = mapTrackedVendorId === v.id;
+      const px = v.x != null ? v.x : v.startX;
+      const py = v.y != null ? v.y : v.startY;
+      const p = toCanvas(px, py);
+      if (p.x < -20 || p.x > cw + 20 || p.y < -20 || p.y > ch + 20) return;
+      const isClosed = v.status === 'closed';
+      const isTracked = mapTrackedVendorId === v.id;
 
     // Glow for active moving
     if (v.moving && !isClosed) {
@@ -2306,10 +2402,13 @@ function initRouteCanvas(v) {
 
     const cx = (e.clientX - rect.left);
     const cy = (e.clientY - rect.top);
-    const scaleX = (cssW / WORLD);
-    const scaleY = (cssH / WORLD);
-    const wx = cx / scaleX;
-    const wy = cy / scaleY;
+    const currentW = rect.width || cssW;
+    const currentH = rect.height || cssH;
+    const routeScale = (currentW / WORLD) * ZOOM_LEVELS[routeMapZoom - 1];
+    const routeOx = currentW / 2 - routeMapCenterX * routeScale;
+    const routeOy = currentH / 2 - routeMapCenterY * routeScale;
+    const wx = (cx - routeOx) / routeScale;
+    const wy = (cy - routeOy) / routeScale;
 
     if (routeSettingMode === 'start') {
       // Set start location
